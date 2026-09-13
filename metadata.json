@@ -1,0 +1,12 @@
+{
+  "name": "JH Innovation Connect",
+  "description": "Societal Innovation Collaboration Portal for Jharkhand - Crowdsourcing community challenges and driving collaborative solutions with universities, industries, and government.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

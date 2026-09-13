@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@layer base {
+  html,
+  body {
+    overflow-x: hidden; /* prevent any element from causing horizontal page bleed */
+  }
+
+  body {
+    color: #0f172a; /* slate-900 — ensures text is visible by default */
+  }
+
+  /* Fix browser autofill making typed text invisible */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a !important;
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+    box-shadow: 0 0 0 1000px #ffffff inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+}
+
+@layer utilities {
+  .font-serif-display {
+    font-family: 'Playfair Display', 'Cinzel', 'Lora', Georgia, serif;
+  }
+  .font-serif-quote {
+    font-family: 'Lora', 'Playfair Display', Georgia, serif;
+  }
+  .font-heading-royal {
+    font-family: 'Cinzel', 'Playfair Display', Georgia, serif;
+  }
+  .font-sans-body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PAGE TRANSITION — Subtle, smooth fade & slight translateY entrance
+   No overlay, no screen flashing, no pause. Fast & accessible.
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes pt-page-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pt-page-enter {
+  animation: pt-page-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+/* ── Accessibility: Respect prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .pt-page-enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
