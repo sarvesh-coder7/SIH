@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   ArrowRight,
   ArrowLeft,
-  HelpCircle,
   Sparkles,
   CheckCircle2,
   Lock,
@@ -248,15 +247,6 @@ export const RoleSelectionPage: React.FC = () => {
 
         {/* Right Navigation */}
         <div className="flex items-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={() => setCurrentView('how-it-works')}
-            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-950 hover:bg-amber-100/60 rounded-xl transition-colors cursor-pointer"
-          >
-            <HelpCircle className="w-4 h-4 text-slate-500" />
-            <span>About the Platform</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setCurrentView('landing')}

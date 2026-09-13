@@ -16,7 +16,6 @@ import {
   Menu,
   X,
   MapPin,
-  Sparkles,
 } from 'lucide-react';
 
 interface CitizenLayoutProps {
@@ -296,16 +295,6 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          {/* Citizen Trust Note */}
-          <div className="bg-gradient-to-br from-amber-50/80 via-white to-amber-50/40 rounded-2xl border border-amber-200/60 p-4 text-xs space-y-2">
-            <div className="flex items-center gap-1.5 text-amber-900 font-bold">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span>How it Works</span>
-            </div>
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              When you report a problem, the platform verifies it and connects the right Jharkhand Universities and partners to build real solutions.
-            </p>
-          </div>
         </aside>
 
         {/* Main Content Pane */}

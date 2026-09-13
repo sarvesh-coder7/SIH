@@ -43,14 +43,75 @@
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   PAGE TRANSITION — Subtle, smooth fade & slight translateY entrance
-   No overlay, no screen flashing, no pause. Fast & accessible.
-   ───────────────────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE TRANSITIONS — Premium, silky-smooth entrance & exit animations
+   Multiple variants for different portal contexts. Fast & accessible.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Standard Page Enter: fade + gentle rise ── */
 @keyframes pt-page-enter {
   0% {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(10px) scale(0.995);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pt-page-enter {
+  animation: pt-page-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+/* ── 2. Portal-Level Enter: used when switching between top-level portal layouts ── */
+@keyframes pt-portal-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(4px);
+  }
+  50% {
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+.pt-portal-enter {
+  animation: pt-portal-enter 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform, filter;
+}
+
+/* ── 3. Sidebar Slide-In: for sidebar itself appearing ── */
+@keyframes pt-slide-in-left {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.pt-sidebar-enter {
+  animation: pt-slide-in-left 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+/* ── 4. Card / Section Stagger: for items inside a page appearing one by one ── */
+@keyframes pt-fade-up {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
   }
   100% {
     opacity: 1;
@@ -58,16 +119,47 @@
   }
 }
 
-.pt-page-enter {
-  animation: pt-page-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+.pt-fade-up {
+  animation: pt-fade-up 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger delays */
+.pt-delay-1 { animation-delay: 60ms; }
+.pt-delay-2 { animation-delay: 120ms; }
+.pt-delay-3 { animation-delay: 180ms; }
+.pt-delay-4 { animation-delay: 240ms; }
+.pt-delay-5 { animation-delay: 300ms; }
+
+/* ── 5. Quick Pop: for modals and toasts ── */
+@keyframes pt-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+  70% {
+    transform: scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.pt-pop-in {
+  animation: pt-pop-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
   will-change: opacity, transform;
 }
 
 /* ── Accessibility: Respect prefers-reduced-motion ── */
 @media (prefers-reduced-motion: reduce) {
-  .pt-page-enter {
+  .pt-page-enter,
+  .pt-portal-enter,
+  .pt-sidebar-enter,
+  .pt-fade-up,
+  .pt-pop-in {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
   }
 }

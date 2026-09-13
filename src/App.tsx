@@ -269,7 +269,7 @@ const AppContent: React.FC = () => {
   // 1. Standalone Full-Screen View for Public Entry Points (Landing, Role Selection, Login, Sign Up)
   if (isStandalonePublicView) {
     return (
-      <div key={currentView} className="pt-page-enter min-h-screen w-full bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950 flex flex-col">
+      <div key={currentView} className="pt-portal-enter min-h-screen w-full bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950 flex flex-col">
         <main className="flex-1 w-full flex flex-col">
           {currentView === 'landing' && <LandingPage />}
           {currentView === 'role-selection' && <RoleSelectionPage />}
@@ -285,44 +285,44 @@ const AppContent: React.FC = () => {
   // 2. Dedicated Standalone Citizen Experience with sidebar, bottom nav, and full-screen layout
   if (isCitizenRole) {
     return (
-      <>
+      <div key="citizen-portal" className="pt-portal-enter">
         <CitizenLayout>
           {renderCitizenView()}
         </CitizenLayout>
         <AuthModal />
-      </>
+      </div>
     );
   }
 
   // 3. Dedicated Standalone University Experience with institutional sidebar, bottom nav, and full-screen layout
   if (isUniversityRole) {
     return (
-      <>
+      <div key="university-portal" className="pt-portal-enter">
         <UniversityLayout>
           {renderUniversityView()}
         </UniversityLayout>
         <AuthModal />
-      </>
+      </div>
     );
   }
 
   // 4. Dedicated Standalone Industry Experience with corporate sidebar, role switcher, and workspaces
   if (isIndustryRole) {
     return (
-      <>
+      <div key="industry-portal" className="pt-portal-enter">
         <IndustryLayout />
         <AuthModal />
-      </>
+      </div>
     );
   }
 
   // 5. Dedicated Standalone Government Experience with official state header, access level switcher, and governance sidebar
   if (isGovernmentRole) {
     return (
-      <>
+      <div key="government-portal" className="pt-portal-enter">
         <GovernmentLayout />
         <AuthModal />
-      </>
+      </div>
     );
   }
 

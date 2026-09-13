@@ -668,26 +668,6 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
               </div>
             ))}
 
-            {/* Ecosystem Architecture Trigger Card */}
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsEcosystemModalOpen(true)}
-                className="w-full text-left p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 hover:border-amber-300 transition-all cursor-pointer group shadow-2xs"
-              >
-                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-                  <span>4-Pillar Platform Engine</span>
-                </div>
-                <p className="text-[10px] text-amber-800 leading-tight">
-                  Discover &rarr; Express Interest &rarr; Official Assignment &rarr; Workspace Lifecycle
-                </p>
-                <span className="text-[10px] font-bold text-amber-900 group-hover:underline inline-flex items-center gap-1 mt-1.5">
-                  <span>View Full System Architecture</span>
-                  <ChevronRight className="w-3 h-3" />
-                </span>
-              </button>
-            </div>
 
             {/* Logout Divider */}
             <div className="pt-2 border-t border-slate-100">
