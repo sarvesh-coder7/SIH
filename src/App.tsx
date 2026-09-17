@@ -269,7 +269,7 @@ const AppContent: React.FC = () => {
   // 1. Standalone Full-Screen View for Public Entry Points (Landing, Role Selection, Login, Sign Up)
   if (isStandalonePublicView) {
     return (
-      <div key={currentView} className="pt-portal-enter min-h-screen w-full bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950 flex flex-col">
+      <div key={currentView} className="pt-page-enter min-h-screen w-full bg-slate-950 text-slate-100 font-sans antialiased selection:bg-amber-500 selection:text-slate-950 flex flex-col">
         <main className="flex-1 w-full flex flex-col">
           {currentView === 'landing' && <LandingPage />}
           {currentView === 'role-selection' && <RoleSelectionPage />}

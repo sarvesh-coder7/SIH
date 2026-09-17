@@ -213,7 +213,7 @@ export const RoleSelectionPage: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col justify-between overflow-hidden bg-gradient-to-b from-[#fbf8ee] via-[#f7f2e4] to-[#f2ecdb] text-slate-800 p-6 sm:p-10 lg:p-12 font-sans-body selection:bg-emerald-600 selection:text-white">
+    <div className="relative w-full h-screen max-h-screen flex flex-col justify-between overflow-hidden bg-gradient-to-b from-[#fbf8ee] via-[#f7f2e4] to-[#f2ecdb] text-slate-800 px-4 sm:px-8 py-2 sm:py-3 font-sans-body selection:bg-emerald-600 selection:text-white">
       {/* Faint watermark of Jharkhand Vidhan Sabha in background matching Screenshot 2 */}
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none mix-blend-multiply overflow-hidden">
         <img
@@ -228,18 +228,18 @@ export const RoleSelectionPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 1. TOP HEADER (MATCHING SCREENSHOT 2) */}
       {/* ========================================================================= */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto flex items-center justify-between pb-5 border-b border-[#e2d6bc]">
+      <div className="relative z-10 w-full max-w-7xl mx-auto flex items-center justify-between pb-2 border-b border-[#e2d6bc] shrink-0">
         {/* Left Brand */}
         <div
           onClick={() => setCurrentView('landing')}
-          className="flex items-center gap-3.5 cursor-pointer select-none group"
+          className="flex items-center gap-3 cursor-pointer select-none group"
         >
-          <JharkhandEmblem size={48} className="ring-2 ring-emerald-700/30 shadow-sm" />
+          <JharkhandEmblem size={44} className="ring-2 ring-emerald-700/30 shadow-sm" />
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-emerald-900 leading-tight">
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-emerald-900 leading-tight">
               JH Innovation Connect
             </h1>
-            <p className="text-xs text-slate-600 font-serif-quote italic">
+            <p className="text-[11px] text-slate-600 font-serif-quote italic">
               Where Jharkhand&apos;s Challenges Meet Innovation
             </p>
           </div>
@@ -249,8 +249,17 @@ export const RoleSelectionPage: React.FC = () => {
         <div className="flex items-center gap-3 sm:gap-4">
           <button
             type="button"
+            onClick={() => setCurrentView('how-it-works')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-950 hover:bg-amber-100/60 rounded-xl transition-colors cursor-pointer"
+          >
+            <HelpCircle className="w-4 h-4 text-slate-500" />
+            <span>About the Platform</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setCurrentView('landing')}
-            className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white/95 hover:bg-white text-slate-800 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 shadow-sm hover:shadow transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-1.5 sm:py-2 bg-white/95 hover:bg-white text-slate-800 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 shadow-sm hover:shadow transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-slate-600" />
             <span>Back to Home</span>
@@ -261,11 +270,11 @@ export const RoleSelectionPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 2. CENTER HEADING (MATCHING SCREENSHOT 2) */}
       {/* ========================================================================= */}
-      <div className="relative z-10 text-center max-w-3xl mx-auto my-auto py-4 space-y-2">
-        <h2 className="text-3xl sm:text-5xl font-serif-display font-bold text-[#0d5c3a] tracking-tight">
+      <div className="relative z-10 text-center max-w-3xl mx-auto py-1 sm:py-1.5 space-y-0.5 shrink-0">
+        <h2 className="text-2xl sm:text-4xl lg:text-[42px] font-serif-display font-bold text-[#0d5c3a] tracking-tight leading-tight">
           Welcome to JH Innovation Connect
         </h2>
-        <p className="text-sm sm:text-base text-slate-700 font-medium">
+        <p className="text-xs sm:text-sm text-slate-700 font-medium">
           Select your role to access the portal
         </p>
       </div>
@@ -273,9 +282,9 @@ export const RoleSelectionPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 3. 4-WAY CIRCULAR HUB DIAGRAM (MATCHING SCREENSHOT 2) */}
       {/* ========================================================================= */}
-      <div className="relative z-10 w-full max-w-4xl mx-auto my-auto py-4 flex flex-col items-center justify-center">
+      <div className="relative z-10 w-full max-w-4xl mx-auto flex-1 flex flex-col items-center justify-center min-h-0 overflow-visible my-auto">
         {/* Desktop Radial Grid Layout */}
-        <div className="relative w-full max-w-2xl h-[460px] hidden sm:flex items-center justify-center">
+        <div className="relative w-full max-w-2xl h-[460px] hidden sm:flex items-center justify-center scale-[0.78] sm:scale-[0.84] md:scale-[0.90] lg:scale-100 xl:scale-100 origin-center transition-transform">
           {/* Circular Orbit Ring connecting the 4 roles */}
           <div className="absolute w-[360px] h-[360px] rounded-full border-2 border-dashed border-amber-400/80 bg-white/20 backdrop-blur-xs flex items-center justify-center pointer-events-none">
             {/* Subtle Inner Glow Ring */}
@@ -303,11 +312,10 @@ export const RoleSelectionPage: React.FC = () => {
             return (
               <div
                 onClick={() => handleSelectRole(cit)}
-                className={`absolute top-0 left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${
-                  isSelected
+                className={`absolute top-0 left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${isSelected
                     ? `${cit.color.ring} bg-amber-50/90 scale-105`
                     : 'border-amber-300 hover:border-amber-400 hover:shadow-lg'
-                }`}
+                  }`}
               >
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${cit.color.iconBg} shadow-sm`}>
                   <Icon className="w-5 h-5" />
@@ -333,11 +341,10 @@ export const RoleSelectionPage: React.FC = () => {
             return (
               <div
                 onClick={() => handleSelectRole(uni)}
-                className={`absolute left-0 top-1/2 -translate-y-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${
-                  isSelected
+                className={`absolute left-0 top-1/2 -translate-y-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${isSelected
                     ? `${uni.color.ring} bg-emerald-50/90 scale-105`
                     : 'border-emerald-300 hover:border-emerald-400 hover:shadow-lg'
-                }`}
+                  }`}
               >
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${uni.color.iconBg} shadow-sm`}>
                   <Icon className="w-5 h-5" />
@@ -363,11 +370,10 @@ export const RoleSelectionPage: React.FC = () => {
             return (
               <div
                 onClick={() => handleSelectRole(ind)}
-                className={`absolute right-0 top-1/2 -translate-y-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${
-                  isSelected
+                className={`absolute right-0 top-1/2 -translate-y-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${isSelected
                     ? `${ind.color.ring} bg-blue-50/90 scale-105`
                     : 'border-blue-300 hover:border-blue-400 hover:shadow-lg'
-                }`}
+                  }`}
               >
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${ind.color.iconBg} shadow-sm`}>
                   <Icon className="w-5 h-5" />
@@ -393,11 +399,10 @@ export const RoleSelectionPage: React.FC = () => {
             return (
               <div
                 onClick={() => handleSelectRole(gov)}
-                className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${
-                  isSelected
+                className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-2xl bg-white border-2 cursor-pointer transition-all duration-200 z-30 shadow-md flex items-center gap-3 ${isSelected
                     ? `${gov.color.ring} bg-purple-50/90 scale-105`
                     : 'border-purple-300 hover:border-purple-400 hover:shadow-lg'
-                }`}
+                  }`}
               >
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 ${gov.color.iconBg} shadow-sm`}>
                   <Icon className="w-5 h-5" />
@@ -417,13 +422,13 @@ export const RoleSelectionPage: React.FC = () => {
         </div>
 
         {/* Mobile Responsive Vertical Cards Grid */}
-        <div className="sm:hidden w-full space-y-3">
-          <div className="p-3 bg-white/90 rounded-xl border border-amber-300 text-center mb-3">
+        <div className="sm:hidden w-full space-y-2 overflow-y-auto max-h-[50vh] pr-1">
+          <div className="p-2.5 bg-white/90 rounded-xl border border-amber-300 text-center mb-1">
             <span className="text-xs font-bold text-slate-900 block">One Platform. Endless Possibilities.</span>
             <span className="text-[10px] text-slate-600">Tap your stakeholder role to enter:</span>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5">
+          <div className="grid grid-cols-1 gap-2">
             {FOUR_ROLES.map((roleItem) => {
               const isSelected = selectedRole.id === roleItem.id;
               const Icon = roleItem.icon;
@@ -431,14 +436,13 @@ export const RoleSelectionPage: React.FC = () => {
                 <div
                   key={roleItem.id}
                   onClick={() => handleSelectRole(roleItem)}
-                  className={`p-3.5 rounded-xl bg-white border-2 flex items-center gap-3 cursor-pointer shadow-xs transition-all ${
-                    isSelected
+                  className={`p-2.5 rounded-xl bg-white border-2 flex items-center gap-3 cursor-pointer shadow-xs transition-all ${isSelected
                       ? `${roleItem.color.ring} bg-amber-50`
                       : 'border-slate-200 hover:border-amber-400'
-                  }`}
+                    }`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${roleItem.color.iconBg}`}>
-                    <Icon className="w-5 h-5" />
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${roleItem.color.iconBg}`}>
+                    <Icon className="w-4 h-4" />
                   </div>
                   <div className="flex-1 text-left">
                     <h4 className="text-xs font-bold text-slate-900">{roleItem.title}</h4>
@@ -455,24 +459,24 @@ export const RoleSelectionPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 4. BOTTOM TRUST FOOTER & CONTINUE BUTTON (MATCHING SCREENSHOT 2) */}
       {/* ========================================================================= */}
-      <div className="relative z-10 w-full text-center space-y-4 pt-2 border-t border-[#e2d6bc]/80">
+      <div className="relative z-10 w-full text-center space-y-2.5 pt-1.5 border-t border-[#e2d6bc]/80 shrink-0">
         {/* Shield Trust Note */}
-        <div className="flex flex-col items-center justify-center gap-1 max-w-lg mx-auto">
-          <div className="flex items-center gap-2 text-xs font-serif-quote italic font-bold text-amber-900">
-            <ShieldCheck className="w-4 h-4 text-amber-700 shrink-0" />
+        <div className="flex flex-col items-center justify-center gap-0.5 max-w-lg mx-auto">
+          <div className="flex items-center gap-1.5 text-xs font-serif-quote italic font-bold text-amber-900">
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
             <span>Secure. Trusted. Collaborative.</span>
           </div>
-          <p className="text-xs text-slate-600 leading-relaxed font-normal">
+          <p className="text-[11px] text-slate-600 leading-tight font-normal">
             Your role helps build a better Jharkhand through innovation and collaboration.
           </p>
         </div>
 
         {/* Selected Role Quick Status & Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5">
           <button
             type="button"
             onClick={handleContinue}
-            className="w-full sm:w-auto min-w-[260px] py-3.5 px-8 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-bold text-sm sm:text-base rounded-xl shadow-lg hover:shadow-amber-500/30 transition-all transform hover:scale-102 active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full sm:w-auto min-w-[240px] py-2.5 sm:py-3 px-6 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-bold text-sm sm:text-base rounded-xl shadow-md hover:shadow-amber-500/30 transition-all transform hover:scale-102 active:scale-98 cursor-pointer flex items-center justify-center gap-2"
           >
             <span>Continue as {selectedRole.title}</span>
             <ArrowRight className="w-4 h-4" />
@@ -482,7 +486,7 @@ export const RoleSelectionPage: React.FC = () => {
           <button
             type="button"
             onClick={handleDirectDashboardAccess}
-            className="w-full sm:w-auto px-5 py-3.5 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-3 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-amber-500" />
             <span>Demo Fast-Pass ({selectedRole.demoAccount.name.split('(')[0].trim()})</span>
@@ -558,12 +562,12 @@ export const RoleSelectionPage: React.FC = () => {
                     {selectedRole.id === 'citizen'
                       ? 'Mobile / Email'
                       : selectedRole.id === 'university'
-                      ? 'AISHE Code'
-                      : selectedRole.id === 'industry'
-                      ? 'Industry / Organization Code'
-                      : selectedRole.id === 'government'
-                      ? 'Officer ID'
-                      : 'Login ID'}
+                        ? 'AISHE Code'
+                        : selectedRole.id === 'industry'
+                          ? 'Industry / Organization Code'
+                          : selectedRole.id === 'government'
+                            ? 'Officer ID'
+                            : 'Login ID'}
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -576,12 +580,12 @@ export const RoleSelectionPage: React.FC = () => {
                         selectedRole.id === 'citizen'
                           ? 'e.g. 9835144210 or citizen@jharkhand.in'
                           : selectedRole.id === 'university'
-                          ? 'e.g. U-1057'
-                          : selectedRole.id === 'industry'
-                          ? 'e.g. C0001 or I0001'
-                          : selectedRole.id === 'government'
-                          ? 'e.g. G0001'
-                          : selectedRole.demoAccount.email
+                            ? 'e.g. U-1057'
+                            : selectedRole.id === 'industry'
+                              ? 'e.g. C0001 or I0001'
+                              : selectedRole.id === 'government'
+                                ? 'e.g. G0001'
+                                : selectedRole.demoAccount.email
                       }
                       className="w-full pl-9 pr-3 py-2.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 bg-white"
                     />

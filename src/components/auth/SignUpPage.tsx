@@ -193,11 +193,16 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     setIsLoading(false);
 
-    if (res.success) {
-      setCurrentUser(res.user as any);
-      switchRole('university_admin');
-      showToast('success', 'Institutional Onboarding Complete', res.message);
-      setCurrentView('university-dashboard');
+    if (res.success && res.user) {
+      if (res.requiresVerification) {
+        setPendingVerificationUser(res.user as AuthUser);
+        showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
+      } else {
+        setCurrentUser(res.user as any);
+        switchRole('university_admin');
+        showToast('success', 'Institutional Onboarding Complete', res.message);
+        setCurrentView('university-dashboard');
+      }
     } else {
       setErrorMessage(res.message);
     }
@@ -228,11 +233,16 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     setIsLoading(false);
 
-    if (res.success) {
-      setCurrentUser(res.user as any);
-      switchRole('faculty_mentor');
-      showToast('success', 'Faculty Profile Created', res.message);
-      setCurrentView('university-proposals');
+    if (res.success && res.user) {
+      if (res.requiresVerification) {
+        setPendingVerificationUser(res.user as AuthUser);
+        showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
+      } else {
+        setCurrentUser(res.user as any);
+        switchRole('faculty_mentor');
+        showToast('success', 'Faculty Profile Created', res.message);
+        setCurrentView('university-proposals');
+      }
     } else {
       setErrorMessage(res.message);
     }
@@ -270,11 +280,16 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     setIsLoading(false);
 
-    if (res.success) {
-      setCurrentUser(res.user as any);
-      switchRole('csr_org');
-      showToast('success', 'Industry Partner Profile Created', res.message);
-      setCurrentView('industry-dashboard');
+    if (res.success && res.user) {
+      if (res.requiresVerification) {
+        setPendingVerificationUser(res.user as AuthUser);
+        showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
+      } else {
+        setCurrentUser(res.user as any);
+        switchRole('csr_org');
+        showToast('success', 'Industry Partner Profile Created', res.message);
+        setCurrentView('industry-dashboard');
+      }
     } else {
       setErrorMessage(res.message);
     }
@@ -307,11 +322,16 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     setIsLoading(false);
 
-    if (res.success) {
-      setCurrentUser(res.user as any);
-      switchRole('industry_msme');
-      showToast('success', 'Startup Profile Registered', res.message);
-      setCurrentView('industry-dashboard');
+    if (res.success && res.user) {
+      if (res.requiresVerification) {
+        setPendingVerificationUser(res.user as AuthUser);
+        showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
+      } else {
+        setCurrentUser(res.user as any);
+        switchRole('industry_msme');
+        showToast('success', 'Startup Profile Registered', res.message);
+        setCurrentView('industry-dashboard');
+      }
     } else {
       setErrorMessage(res.message);
     }
@@ -1119,10 +1139,23 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
             setPendingVerificationUser(null);
           }}
           onVerified={() => {
+            const role = pendingVerificationUser.role;
             setPendingVerificationUser(null);
-            setCurrentUser(authService.getCurrentUser());
-            setCurrentView('citizen-dashboard');
-            showToast('success', 'Email Verified', 'Your citizen account has been successfully created and verified.');
+            
+            // Re-fetch or rely on the authService current user after successful auto-login
+            const authedUser = authService.getCurrentUser();
+            setCurrentUser(authedUser as any);
+            switchRole(role);
+            
+            let dashboardView = 'citizen-dashboard';
+            
+            if (role === 'university_admin') dashboardView = 'university-dashboard';
+            else if (role === 'faculty_mentor') dashboardView = 'university-proposals';
+            else if (role === 'csr_org' || role === 'industry_msme') dashboardView = 'industry-dashboard';
+            else if (role === 'govt_department' || role === 'platform_admin') dashboardView = 'government-dashboard';
+            
+            setCurrentView(dashboardView as any);
+            showToast('success', 'Registration Complete', `Welcome! Your ${role.replace('_', ' ')} account has been verified.`);
           }}
         />
       )}

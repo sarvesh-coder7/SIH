@@ -17,8 +17,11 @@ const toAuthUser = (profile: any, authUser?: any): AuthUser => ({
   roleProfileId: profile.login_id || profile.id || authUser?.id,
 });
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
 export class AuthService {
   private currentSession: AuthSession | null = null;
+  private pendingAuth: { email: string; password?: string; role: UserRole } | null = null;
 
   constructor() {
     void this.initDatabase();
@@ -127,15 +130,52 @@ export class AuthService {
   }
 
   public async generateVerificationCode(email: string): Promise<boolean> {
-    const { error } = await supabase.auth.resend({ type:'signup', email: email.trim().toLowerCase() });
-    return !error;
+    try {
+      const res = await fetch(`${API_URL}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      return data.success === true;
+    } catch {
+      return false;
+    }
   }
 
   public async verifyEmail(_userId: string, email: string, code: string): Promise<{success:boolean; message:string}> {
-    const { data, error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type:'email' });
-    if (error || !data.user) return { success:false, message:error?.message || 'Invalid verification code.' };
-    await this.syncSessionFromSupabase(data.user, data.session);
-    return { success:true, message:'Email address verified successfully!' };
+    try {
+      const res = await fetch(`${API_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), otp: code.trim() }),
+      });
+      const data = await res.json();
+      
+      if (!data.success) {
+        return { success: false, message: data.error || 'Invalid verification code.' };
+      }
+
+      // OTP verified and account created on backend.
+      // Auto-login with pending credentials.
+      if (this.pendingAuth && this.pendingAuth.email === email.trim().toLowerCase()) {
+        const loginResult = await this.login(
+          this.pendingAuth.email,
+          this.pendingAuth.password,
+          this.pendingAuth.role
+        );
+        this.pendingAuth = null;
+        
+        // If login fails for existing users, that's still a successful verification
+        if (!loginResult.success && data.existingUser) {
+          return { success: true, message: 'Account already exists. Please log in.' };
+        }
+      }
+      
+      return { success: true, message: 'Email verified and account created successfully!' };
+    } catch {
+      return { success: false, message: 'Error communicating with verification server.' };
+    }
   }
 
   public async requestPasswordReset(email: string): Promise<{success:boolean; resetCode?:string; message:string}> {
@@ -149,23 +189,44 @@ export class AuthService {
     return error ? {success:false,message:error.message} : {success:true,message:'Password updated successfully.'};
   }
 
-  private async signUpWithProfile(email: string, password: string, meta: Record<string, any>, requestedRole: UserRole, message: string) {
-    const { data, error } = await supabase.auth.signUp({ email, password, options:{ data: meta } });
-    if (error) return { success:false, user:undefined, message:error.message, requiresVerification:false };
-    if (!data.user) return { success:false, user:undefined, message:'Supabase did not create the account.', requiresVerification:false };
-
-    if (data.session) await this.syncSessionFromSupabase(data.user, data.session);
-    else {
-      // Email confirmation is enabled: return a lightweight user so the UI can open verification.
-      this.currentSession = null;
+  private async signUpWithProfile(email: string, password: string, meta: Record<string, any>, requestedRole: UserRole, _message: string) {
+    const cleanEmail = email.trim().toLowerCase();
+    
+    try {
+      const res = await fetch(`${API_URL}/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password, meta }),
+      });
+      const data = await res.json();
+      
+      if (!data.success) {
+        return { success: false, user: undefined, message: data.error || 'Failed to send verification email.', requiresVerification: false };
+      }
+      
+      // Store credentials for auto-login after verification
+      this.pendingAuth = { email: cleanEmail, password, role: requestedRole };
+      
+      // Return a temporary user object so the UI can open the OTP modal
+      const user = {
+        id: 'pending',
+        name: meta.full_name || meta.first_name || 'User',
+        email: cleanEmail,
+        phone: meta.phone || '',
+        role: requestedRole,
+        district: meta.district || 'Ranchi',
+        organization: meta.organization,
+        designation: meta.designation,
+        verified: false,
+        isEmailVerified: false,
+        joinedDate: new Date().toISOString().split('T')[0],
+        roleProfileId: 'pending',
+      } as AuthUser;
+      
+      return { success: true, user, message: 'Verification code sent to your email.', requiresVerification: true };
+    } catch {
+      return { success: false, user: undefined, message: 'Cannot connect to server. Please try again.', requiresVerification: false };
     }
-
-    const user = this.currentSession?.user || {
-      id:data.user.id, name:meta.full_name || meta.first_name || 'User', email, phone:meta.phone || '', role:requestedRole,
-      district:meta.district || 'Ranchi', organization:meta.organization, designation:meta.designation,
-      verified:false, isEmailVerified:false, joinedDate:new Date().toISOString().split('T')[0], roleProfileId:data.user.id,
-    } as AuthUser;
-    return { success:true, user, message, requiresVerification:!data.session };
   }
 
   public async registerCitizen(data: {fullName:string;email:string;phone:string;password?:string;district:string;block?:string;village?:string}) {

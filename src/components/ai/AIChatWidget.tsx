@@ -10,9 +10,12 @@ import {
   Check,
   ArrowRight,
   ExternalLink,
+  Mic,
+  MicOff,
 } from 'lucide-react';
 import { aiService } from '../../services/aiService';
 import { useApp, AppView } from '../../context/AppContext';
+import AIVoiceGlobe, { VoiceGlobeState } from './AIVoiceGlobe';
 
 export interface ChatMessage {
   id: string;
@@ -52,9 +55,79 @@ export const AIChatWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [globeState, setGlobeState] = useState<VoiceGlobeState | 'idle'>('idle');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // We need a stable ref to handleSendMessage so the speech recognition listener doesn't capture stale state
+  const handleSendMessageRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Initialize speech recognition
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      
+      recognitionRef.current.onresult = async (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInputText((prev) => prev + (prev ? ' ' : '') + transcript);
+        setIsListening(false);
+        setGlobeState('processing');
+        
+        if (handleSendMessageRef.current) {
+          await handleSendMessageRef.current(transcript);
+        }
+        
+        setGlobeState('success');
+        setTimeout(() => setGlobeState('idle'), 2000);
+      };
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+        setGlobeState('idle');
+      };
+      
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+        setGlobeState((prev) => (prev === 'listening' ? 'idle' : prev));
+      };
+    }
+    
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      showToast('error', 'Voice Input', 'Speech recognition is not supported in this browser.');
+      return;
+    }
+    
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      setGlobeState('idle');
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+        setGlobeState('listening');
+      } catch (err) {
+        console.error("Microphone access error:", err);
+      }
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -377,6 +450,10 @@ export const AIChatWidget: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    handleSendMessageRef.current = handleSendMessage;
+  });
+
   const handleClear = () => {
     setMessages([INITIAL_MESSAGE]);
   };
@@ -397,6 +474,8 @@ export const AIChatWidget: React.FC = () => {
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
+      {globeState !== 'idle' && <AIVoiceGlobe state={globeState} />}
+      
       {/* Floating Chat Window */}
       {isOpen && (
         <div className="w-[92vw] sm:w-[380px] h-[520px] max-h-[82vh] bg-white rounded-3xl shadow-2xl border border-[#e2d6bc] flex flex-col overflow-hidden mb-3 animate-in fade-in slide-in-from-bottom-5 duration-200 ring-1 ring-slate-900/10">
@@ -568,6 +647,18 @@ export const AIChatWidget: React.FC = () => {
                 disabled={isLoading}
                 className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
               />
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`p-2 rounded-xl transition-all shrink-0 cursor-pointer flex items-center justify-center ${
+                  isListening 
+                    ? 'bg-rose-100 text-rose-600 hover:bg-rose-200 animate-pulse' 
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+                title={isListening ? "Stop listening" : "Start voice input"}
+              >
+                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
               <button
                 type="submit"
                 disabled={!inputText.trim() || isLoading}

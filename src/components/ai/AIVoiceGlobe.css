@@ -1,0 +1,330 @@
+/* =========================================================
+   AI VOICE GLOBE
+   Bottom-center voice assistant overlay.
+   Visual target: orange glowing Earth + side waveforms.
+========================================================= */
+
+.ai-voice-globe-overlay {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: min(760px, 100vw);
+  height: 185px;
+  transform: translateX(-50%);
+  z-index: 9999;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+
+  pointer-events: none;
+  font-family: inherit;
+  padding: 0 20px 18px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+/* Soft orange halo behind the Earth */
+.ai-globe-background-glow {
+  position: absolute;
+  left: 50%;
+  bottom: 35px;
+  width: 250px;
+  height: 140px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 126, 0, 0.48) 0%,
+    rgba(255, 151, 18, 0.28) 34%,
+    rgba(255, 184, 65, 0.10) 58%,
+    transparent 76%
+  );
+  filter: blur(30px);
+  pointer-events: none;
+  animation: globeGlow 3s ease-in-out infinite;
+}
+
+@keyframes globeGlow {
+  0%, 100% {
+    opacity: .70;
+    transform: translateX(-50%) scale(.94);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+
+.ai-globe-interface {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* CRITICAL: one horizontal row */
+.ai-globe-active-ui {
+  width: 100%;
+  min-height: 110px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* Globe area */
+.ai-globe-canvas {
+  position: relative;
+  flex: 0 0 115px;
+  width: 115px;
+  height: 115px;
+  z-index: 3;
+  overflow: visible;
+
+  filter:
+    drop-shadow(0 0 10px rgba(255, 145, 0, .90))
+    drop-shadow(0 0 24px rgba(255, 130, 0, .58))
+    drop-shadow(0 0 52px rgba(255, 175, 35, .34));
+
+  animation: globeFloat 3s ease-in-out infinite;
+}
+
+@keyframes globeFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Side audio waveforms */
+.ai-globe-waveform {
+  flex: 0 0 85px;
+  width: 85px;
+  height: 44px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  position: relative;
+  z-index: 4;
+}
+
+.ai-globe-waveform span {
+  display: block;
+  flex: 0 0 3px;
+  width: 3px;
+  border-radius: 999px;
+
+  background: linear-gradient(
+    to bottom,
+    #ffd36a 0%,
+    #ffad20 48%,
+    #ff7a00 100%
+  );
+
+  box-shadow: 0 0 7px rgba(255, 145, 0, .55);
+  animation: aiWave .9s ease-in-out infinite;
+}
+
+.ai-globe-waveform.left span:nth-child(1),
+.ai-globe-waveform.right span:nth-child(15) { height: 6px; }
+
+.ai-globe-waveform.left span:nth-child(2),
+.ai-globe-waveform.right span:nth-child(14) { height: 10px; }
+
+.ai-globe-waveform.left span:nth-child(3),
+.ai-globe-waveform.right span:nth-child(13) { height: 14px; }
+
+.ai-globe-waveform.left span:nth-child(4),
+.ai-globe-waveform.right span:nth-child(12) { height: 9px; }
+
+.ai-globe-waveform.left span:nth-child(5),
+.ai-globe-waveform.right span:nth-child(11) { height: 19px; }
+
+.ai-globe-waveform.left span:nth-child(6),
+.ai-globe-waveform.right span:nth-child(10) { height: 14px; }
+
+.ai-globe-waveform.left span:nth-child(7),
+.ai-globe-waveform.right span:nth-child(9) { height: 24px; }
+
+.ai-globe-waveform.left span:nth-child(8),
+.ai-globe-waveform.right span:nth-child(8) { height: 28px; }
+
+@keyframes aiWave {
+  0%, 100% {
+    transform: scaleY(.42);
+    opacity: .55;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* Text belongs BELOW the globe/side-wave row */
+.ai-globe-text {
+  position: relative;
+  z-index: 5;
+  margin-top: 2px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+
+  text-align: center;
+  pointer-events: none;
+}
+
+.ai-globe-text h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -.2px;
+  color: #16251e;
+  text-shadow: 0 1px 5px rgba(255,255,255,.95);
+}
+
+.ai-globe-text p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 500;
+  color: #56665f;
+  white-space: nowrap;
+  text-shadow: 0 1px 5px rgba(255,255,255,.9);
+}
+
+/* Full-width decorative bottom wave */
+.ai-globe-wave-container {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 60px;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ai-globe-wave-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Processing */
+.ai-voice-globe-overlay.is-processing .ai-globe-canvas {
+  filter:
+    drop-shadow(0 0 12px rgba(255, 145, 0, 1))
+    drop-shadow(0 0 30px rgba(255, 120, 0, .72))
+    drop-shadow(0 0 58px rgba(255, 180, 50, .40));
+  animation: processingPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes processingPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.055); }
+}
+
+.ai-globe-waveform.processing span {
+  animation-duration: .45s;
+}
+
+/* Success */
+.ai-globe-success {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+
+  background: linear-gradient(135deg, #16865d, #36bd82);
+  border: 2px solid #ffab19;
+  box-shadow:
+    0 0 0 5px rgba(255, 154, 20, .12),
+    0 0 30px rgba(255, 145, 0, .5);
+
+  animation: successPop .45s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes successPop {
+  0% { transform: scale(.4); opacity: 0; }
+  70% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 760px) {
+  .ai-voice-globe-overlay {
+    width: 100vw;
+    height: 170px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .ai-globe-active-ui {
+    gap: 8px;
+  }
+
+  .ai-globe-canvas {
+    flex-basis: 105px;
+    width: 105px;
+    height: 105px;
+  }
+
+  .ai-globe-waveform {
+    flex-basis: 75px;
+    width: 75px;
+    gap: 3px;
+  }
+}
+
+@media (max-width: 520px) {
+  .ai-voice-globe-overlay {
+    height: 155px;
+  }
+
+  .ai-globe-active-ui {
+    gap: 2px;
+  }
+
+  .ai-globe-canvas {
+    flex-basis: 95px;
+    width: 95px;
+    height: 95px;
+  }
+
+  .ai-globe-waveform {
+    flex-basis: 60px;
+    width: 60px;
+    gap: 2px;
+  }
+
+  .ai-globe-waveform span {
+    flex-basis: 2px;
+    width: 2px;
+  }
+
+  .ai-globe-text h3 {
+    font-size: 14px;
+  }
+
+  .ai-globe-text p {
+    font-size: 10px;
+  }
+}
