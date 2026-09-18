@@ -26,54 +26,8 @@ export const CitizenNotificationsPage: React.FC = () => {
 
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  // Enhance notifications with Citizen-specific alerts if needed
-  const citizenNotifs = notifications.length > 0 ? notifications : [
-    {
-      id: 'notif-cit-1',
-      title: 'Problem Report Received',
-      message: 'Your report JH-2026-001248 (Arsenic Turbidity in Torpa) has been successfully registered.',
-      date: 'Just now',
-      read: false,
-      type: 'challenge',
-      targetId: 'JH-2026-001248',
-    },
-    {
-      id: 'notif-cit-2',
-      title: 'Report Moved to Under Review',
-      message: 'Nodal verification officer has started field verification in Khunti district.',
-      date: '2 hours ago',
-      read: false,
-      type: 'challenge',
-      targetId: 'JH-2026-001248',
-    },
-    {
-      id: 'notif-cit-3',
-      title: 'University Assigned to Problem',
-      message: 'Birla Institute of Technology (BIT) Mesra has been allocated to develop a low-cost filtration solution.',
-      date: '1 day ago',
-      read: true,
-      type: 'assignment',
-      targetId: 'JH-2026-001248',
-    },
-    {
-      id: 'notif-cit-4',
-      title: 'Solution in Progress Update',
-      message: 'Prototype field testing report has been posted by the research team.',
-      date: '3 days ago',
-      read: true,
-      type: 'project',
-      targetId: 'JH-2026-001248',
-    },
-    {
-      id: 'notif-cit-5',
-      title: 'Successful Public Outcome',
-      message: 'Solar Cold Storage project in Gumla has been completed, benefiting 850+ farmers.',
-      date: '1 week ago',
-      read: true,
-      type: 'impact',
-      targetId: 'JH-2026-001248',
-    },
-  ];
+  // Use only real notifications from the database — no hardcoded fallbacks
+  const citizenNotifs = notifications;
 
   const filteredNotifs = citizenNotifs.filter((n) => (filter === 'unread' ? !n.read : true));
 

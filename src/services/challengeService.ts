@@ -1,6 +1,7 @@
 import { Challenge, ChallengeCategory, ChallengeUrgency, ChallengeStatus, AIAnalysis } from '../types';
 import { aiService } from './aiService';
 import { supabase } from '../lib/supabase';
+import { resolveMediaUrl } from '../lib/mediaUrl';
 
 export interface CreateChallengeInput {
   title: string;
@@ -90,7 +91,9 @@ class ChallengeService {
       urgency: row.urgency || 'Medium',
       expectedImpact: row.expected_impact || '',
       evidence: (mediaRes.data || []).map((m: any) => ({
-        id: m.id, type: m.media_type, url: m.public_url || m.storage_path, caption: m.caption || '',
+        id: m.id, type: m.media_type,
+        url: resolveMediaUrl(m.public_url) || resolveMediaUrl(m.storage_path),
+        caption: m.caption || '',
         timestamp: m.created_at || '', gpsCoordinates: m.latitude != null ? { lat: Number(m.latitude), lng: Number(m.longitude) } : undefined,
         geotagLocation: m.geotag_location, accuracy: m.accuracy, isGeotagged: m.is_geotagged,
         metadataAvailable: m.metadata_available, source: m.source, fileName: m.file_name, fileSize: m.file_size,
@@ -185,7 +188,7 @@ class ChallengeService {
     return (data || []).map((m: any) => ({
       id: m.id,
       type: m.media_type,
-      url: m.public_url || m.storage_path,
+      url: resolveMediaUrl(m.public_url) || resolveMediaUrl(m.storage_path),
       caption: m.caption || '',
       timestamp: m.created_at || '',
       gpsCoordinates: m.latitude != null ? { lat: Number(m.latitude), lng: Number(m.longitude) } : undefined,
@@ -598,6 +601,57 @@ class ChallengeService {
     }
 
     return null;
+  }
+  /**
+   * Permanently deletes a challenge and all its associated data:
+   *   - challenge_media rows (and storage files for both known buckets)
+   *   - challenge_tags
+   *   - challenge_timeline
+   *   - ai_classifications
+   *   - the challenge row itself
+   *
+   * Returns true if the challenge row was deleted, false on error.
+   */
+  async deleteChallenge(id: string): Promise<boolean> {
+    try {
+      // 1. Fetch media rows so we can delete storage files
+      const { data: mediaRows } = await supabase
+        .from('challenge_media')
+        .select('storage_path, public_url')
+        .eq('challenge_id', id);
+
+      // 2. Delete storage files from both buckets (best-effort)
+      if (mediaRows && mediaRows.length > 0) {
+        const paths = mediaRows
+          .map((m: any) => m.storage_path)
+          .filter(Boolean) as string[];
+        if (paths.length > 0) {
+          await Promise.allSettled([
+            supabase.storage.from('challenge-evidence').remove(paths),
+            supabase.storage.from('media').remove(paths),
+          ]);
+        }
+      }
+
+      // 3. Delete child table rows (order matters for FK constraints)
+      await Promise.allSettled([
+        supabase.from('challenge_media').delete().eq('challenge_id', id),
+        supabase.from('challenge_tags').delete().eq('challenge_id', id),
+        supabase.from('challenge_timeline').delete().eq('challenge_id', id),
+        supabase.from('ai_classifications').delete().eq('challenge_id', id),
+      ]);
+
+      // 4. Delete the challenge itself
+      const { error } = await supabase.from('challenges').delete().eq('id', id);
+      if (error) {
+        console.error('deleteChallenge: failed to delete challenge row:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('deleteChallenge: unexpected error:', err);
+      return false;
+    }
   }
 }
 

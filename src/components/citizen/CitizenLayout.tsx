@@ -86,7 +86,7 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased selection:bg-amber-500 selection:text-slate-950">
       {/* Top Header */}
-      <header className="sticky top-0 z-30 w-full bg-white border-b border-slate-200 shadow-2xs">
+      <header className="sticky top-0 z-30 w-full bg-white border-b-2 border-[#1f2937] shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3">
@@ -186,11 +186,11 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
       </header>
 
       {/* Body with Desktop Sidebar + Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-8">
+      <div className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-6 py-6 flex gap-6">
         {/* Desktop Sidebar (Left Navigation) */}
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-6">
+        <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-6 sticky top-24 self-start min-h-[calc(100vh-8rem)]">
           {/* Main Citizen Navigation */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-2xs space-y-1">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-2xs space-y-1 flex-1 flex flex-col justify-between">
             <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-600">
               Citizen Portal
             </div>

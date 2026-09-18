@@ -1,8 +1,8 @@
 import { ProjectLifecycle, SolutionProposal, Milestone, MultidisciplinaryTeam } from '../types';
-import { MOCK_PROJECTS } from '../mock/data';
 
 class ProjectService {
-  private projects: ProjectLifecycle[] = [...MOCK_PROJECTS];
+  // Projects are loaded from Supabase; no seed data here.
+  private projects: ProjectLifecycle[] = [];
 
   async getProjects(): Promise<ProjectLifecycle[]> {
     await new Promise((res) => setTimeout(res, 120));

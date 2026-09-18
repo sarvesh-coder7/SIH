@@ -348,6 +348,7 @@ interface AppContextType {
     action: 'Review' | 'Flag' | 'Restrict' | 'Request Correction' | 'Archive' | 'Remove';
     reason: string;
   }) => void;
+  deleteChallenge: (id: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -573,6 +574,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
     setProjects(prList);
     setNotifications(noList);
+  };
+
+  const deleteChallenge = async (id: string): Promise<boolean> => {
+    const success = await challengeService.deleteChallenge(id);
+    if (success) {
+      setChallenges((prev) => prev.filter((c) => c.id !== id && c.trackingId !== id));
+    }
+    return success;
   };
 
   const markNotificationAsRead = async (id: string) => {
@@ -1718,6 +1727,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         createGovernmentSupportAction,
         updateGovernmentSupportActionStatus,
         moderateContent,
+        deleteChallenge,
       }}
     >
       {children}

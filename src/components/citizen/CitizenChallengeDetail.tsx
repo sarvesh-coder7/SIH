@@ -53,41 +53,44 @@ export const CitizenChallengeDetail: React.FC = () => {
   } = useApp();
 
   const [liveChallenge, setLiveChallenge] = useState<Challenge | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [endorsed, setEndorsed] = useState(false);
   const [following, setFollowing] = useState(false);
   const [activePhotoModal, setActivePhotoModal] = useState<MultimediaEvidence | null>(null);
   const [newComment, setNewComment] = useState('');
-  const [comments, setComments] = useState<Array<{ id: string; sender: string; role: string; text: string; date: string }>>([
-    {
-      id: 'c-1',
-      sender: 'Nodal Verification Officer',
-      role: 'Government of Jharkhand',
-      text: 'Problem report registered and geotag metadata verified against district registry.',
-      date: 'Official Notice',
-    },
-  ]);
+  // Comments come from real timeline/notifications — no hardcoded stubs
+  const [comments, setComments] = useState<Array<{ id: string; sender: string; role: string; text: string; date: string }>>([]);
 
   useEffect(() => {
-    if (!selectedChallengeId) return;
+    if (!selectedChallengeId) {
+      setIsLoading(false);
+      return;
+    }
     let mounted = true;
     setIsLoading(true);
-    challengeService
-      .getChallengeById(selectedChallengeId)
-      .then((data) => {
-        if (mounted) {
-          if (data) setLiveChallenge(data);
+
+    const fetchChallenge = async (attempt = 1) => {
+      try {
+        const data = await challengeService.getChallengeById(selectedChallengeId);
+        if (!mounted) return;
+        if (data) {
+          setLiveChallenge(data);
+          setIsLoading(false);
+        } else if (attempt < 3) {
+          // Retry — Supabase may still be propagating the insert
+          setTimeout(() => fetchChallenge(attempt + 1), 1500);
+        } else {
           setIsLoading(false);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.warn('Live challenge query failed:', err);
         if (mounted) setIsLoading(false);
-      });
-    return () => {
-      mounted = false;
+      }
     };
+
+    void fetchChallenge();
+    return () => { mounted = false; };
   }, [selectedChallengeId]);
 
   const handleRefresh = async () => {
@@ -98,6 +101,8 @@ export const CitizenChallengeDetail: React.FC = () => {
       if (data) {
         setLiveChallenge(data);
         showToast('success', 'Status Refreshed', 'Loaded latest verified milestones from the portal.');
+      } else {
+        showToast('error', 'Not Found', 'Could not retrieve this report. It may have been deleted.');
       }
       await refreshData();
     } catch (err) {
@@ -107,17 +112,18 @@ export const CitizenChallengeDetail: React.FC = () => {
     }
   };
 
+  // Use live Supabase data; fall back to local cache only (never challenges[0])
   const challenge =
     liveChallenge ||
     challenges.find((c) => c.id === selectedChallengeId || c.trackingId === selectedChallengeId) ||
-    challenges[0];
+    null;
 
   if (isLoading && !challenge) {
     return (
       <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 shadow-xs space-y-4">
         <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <h2 className="text-base font-bold text-slate-800">Retrieving Live Challenge Details...</h2>
-        <p className="text-xs text-slate-500">Querying verified tracking status and evidence from the state repository.</p>
+        <h2 className="text-base font-bold text-slate-800">Loading Your Complaint...</h2>
+        <p className="text-xs text-slate-500">Fetching your report from the Supabase database. Please wait a moment.</p>
       </div>
     );
   }
@@ -125,14 +131,25 @@ export const CitizenChallengeDetail: React.FC = () => {
   if (!challenge) {
     return (
       <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-xs space-y-4">
-        <h2 className="text-lg font-bold text-slate-900">Challenge Not Found</h2>
-        <p className="text-xs text-slate-500">The requested problem reference could not be located in the state database.</p>
-        <button
-          onClick={() => goBack(currentRole === 'citizen' ? 'citizen-dashboard' : 'explore-challenges')}
-          className="px-5 py-2.5 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl cursor-pointer hover:bg-amber-400 transition-colors"
-        >
-          Back
-        </button>
+        <h2 className="text-lg font-bold text-slate-900">Report Not Found</h2>
+        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          This report could not be retrieved. It may still be saving — please try again in a moment, or go back to My Challenges.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={handleRefresh}
+            className="px-5 py-2.5 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl cursor-pointer hover:bg-amber-400 transition-colors flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Try Again
+          </button>
+          <button
+            onClick={() => setCurrentView('citizen-my-challenges')}
+            className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+          >
+            My Challenges
+          </button>
+        </div>
       </div>
     );
   }
@@ -718,7 +735,9 @@ export const CitizenChallengeDetail: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {challenge.evidence.map((ev) => (
+            {challenge.evidence
+              .filter((ev) => ev.url && !ev.url.startsWith('blob:'))
+              .map((ev) => (
               <div
                 key={ev.id}
                 onClick={() => setActivePhotoModal(ev)}
@@ -732,6 +751,7 @@ export const CitizenChallengeDetail: React.FC = () => {
                       muted
                       playsInline
                       preload="metadata"
+                      onError={() => console.warn('[Evidence] Video failed to load:', ev.url)}
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-10 h-10 rounded-full bg-amber-500/90 text-slate-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -749,6 +769,17 @@ export const CitizenChallengeDetail: React.FC = () => {
                       src={ev.url}
                       alt={ev.caption || 'Evidence Photo'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        console.warn('[Evidence] Image failed to load:', ev.url);
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        const parent = e.currentTarget.closest('.group');
+                        if (parent && !parent.querySelector('.ev-error')) {
+                          const err = document.createElement('div');
+                          err.className = 'ev-error absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-800 text-slate-400';
+                          err.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span style="font-size:9px;font-weight:600">Media unavailable</span>';
+                          parent.appendChild(err);
+                        }
+                      }}
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                       <Maximize2 className="w-5 h-5" />
@@ -926,8 +957,8 @@ export const CitizenChallengeDetail: React.FC = () => {
               <video
                 src={activePhotoModal.url}
                 controls
-                autoPlay
                 className="w-full max-h-[70vh] rounded-xl bg-black"
+                onError={() => console.warn('[Evidence Modal] Video failed to load:', activePhotoModal.url)}
               />
             ) : (
               <img

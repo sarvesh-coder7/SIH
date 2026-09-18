@@ -19,18 +19,27 @@ import {
   RotateCcw,
   MoreVertical,
   CheckCircle,
-  Activity
+  Activity,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const CitizenMyChallengesPage: React.FC = () => {
-  const { challenges, navigateToChallenge, setCurrentView } = useApp();
+  const { challenges, currentUser, navigateToChallenge, setCurrentView, showToast, deleteChallenge } = useApp();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('All');
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Only show challenges submitted by the current user
+  const myOwnChallenges = challenges.filter(
+    (ch) => ch.submittedBy?.userId === currentUser.id
+  );
 
   // Filter list
-  const filteredChallenges = challenges.filter((ch) => {
+  const filteredChallenges = myOwnChallenges.filter((ch) => {
     // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -74,6 +83,18 @@ export const CitizenMyChallengesPage: React.FC = () => {
 
     return true;
   });
+
+  const handleDeleteChallenge = async (id: string) => {
+    setIsDeleting(true);
+    const success = await deleteChallenge(id);
+    setIsDeleting(false);
+    setConfirmDeleteId(null);
+    if (success) {
+      showToast('success', 'Complaint Deleted', 'Your complaint and all attached media have been permanently removed.');
+    } else {
+      showToast('error', 'Delete Failed', 'Could not delete this complaint. Please try again.');
+    }
+  };
 
   return (
     <div className="space-y-6 font-sans-body">
@@ -196,9 +217,9 @@ export const CitizenMyChallengesPage: React.FC = () => {
           {filteredChallenges.map((ch, index) => {
             const statusInfo = getCitizenStatusLabel(ch.status, ch.isReopened);
             const trustInfo = getCitizenTrustStatus(ch);
-            const photoEvidence = (ch.evidence || []).filter((e) => e.type === 'image');
+            const photoEvidence = (ch.evidence || []).filter((e) => e.type === 'image' && e.url && !e.url.startsWith('blob:'));
             const photoCount = photoEvidence.length;
-            const imageUrl = photoCount > 0 ? photoEvidence[0].url : 'https://images.unsplash.com/photo-1590615370581-265ae19a053b?q=80&w=600&auto=format&fit=crop';
+            const imageUrl = photoCount > 0 ? photoEvidence[0].url : null;
             const formattedDate = ch.submittedAt
               ? new Date(ch.submittedAt).toLocaleString('en-US', {
                   day: 'numeric',
@@ -280,11 +301,29 @@ export const CitizenMyChallengesPage: React.FC = () => {
               >
                 {/* 1. LEFT IMAGE (20-22%) */}
                 <div className="w-full md:w-[170px] lg:w-[180px] shrink-0 relative rounded-[12px] sm:rounded-[16px] overflow-hidden bg-slate-100 flex flex-col justify-center">
-                  <img 
-                    src={imageUrl} 
-                    alt={ch.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200 ease-in-out" 
-                  />
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={ch.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200 ease-in-out"
+                      onError={(e) => {
+                        console.warn('[CitizenMyChallenges] Image failed to load:', imageUrl);
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent && !parent.querySelector('.media-placeholder')) {
+                          const placeholder = document.createElement('div');
+                          placeholder.className = 'media-placeholder absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400';
+                          placeholder.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span style="font-size:10px;font-weight:600">No photo</span>';
+                          parent.appendChild(placeholder);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400 bg-slate-100">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                      <span className="text-[10px] font-semibold">No photo</span>
+                    </div>
+                  )}
                   <div className="pt-[75%] md:pt-[100%]"></div> {/* Aspect ratio hack for mobile */}
                   {photoCount > 0 && (
                     <div className="absolute bottom-2 left-2 bg-black/65 backdrop-blur-sm text-white text-[11px] font-medium px-2.5 py-1 rounded-[8px] flex items-center gap-1.5 z-10">
@@ -375,8 +414,8 @@ export const CitizenMyChallengesPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  <div className="pt-2 md:pt-4">
+                  {/* Action Buttons */}
+                  <div className="pt-2 md:pt-4 space-y-2">
                     <button
                       type="button"
                       onClick={() => navigateToChallenge(ch.id)}
@@ -385,11 +424,77 @@ export const CitizenMyChallengesPage: React.FC = () => {
                       <span>View Details</span>
                       <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(ch.id)}
+                      className="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200/60 text-rose-700 font-semibold text-[12px] py-[8px] rounded-[10px] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete Complaint</span>
+                    </button>
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {confirmDeleteId && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => { if (!isDeleting) setConfirmDeleteId(null); }}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Icon */}
+            <div className="flex items-center justify-center">
+              <div className="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center">
+                <AlertTriangle className="w-7 h-7 text-rose-600" />
+              </div>
+            </div>
+
+            {/* Text */}
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-bold text-slate-900">Delete this complaint?</h3>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                This will <strong>permanently delete</strong> this complaint along with all attached photos, videos, and timeline data. This action cannot be undone.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(null)}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteChallenge(confirmDeleteId)}
+                disabled={isDeleting}
+                className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition-colors cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Yes, Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

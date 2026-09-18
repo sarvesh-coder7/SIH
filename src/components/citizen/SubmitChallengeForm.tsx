@@ -1614,12 +1614,7 @@ export const SubmitChallengeForm: React.FC = () => {
             {/* 4. Upload Video */}
             <button
               type="button"
-              onClick={() => {
-                if (fileInputRef.current) {
-                  fileInputRef.current.accept = 'video/*';
-                  fileInputRef.current.click();
-                }
-              }}
+              onClick={() => videoCaptureRef.current?.click()}
               className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-300 shadow-2xs transition-all flex flex-col items-center justify-center gap-2 cursor-pointer text-center group h-full"
             >
               <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -1665,17 +1660,19 @@ export const SubmitChallengeForm: React.FC = () => {
             className="hidden"
             onChange={handlePhotoUpload}
           />
+          {/* Document upload — only PDF/Word/text */}
           <input
             ref={fileInputRef}
             type="file"
+            accept=".pdf,.doc,.docx,.txt"
             className="hidden"
             onChange={(e) => handleFileUpload(e, 'document')}
           />
+          {/* Video upload — file picker (no capture attr so desktop & mobile both work) */}
           <input
             ref={videoCaptureRef}
             type="file"
             accept="video/*"
-            capture="environment"
             className="hidden"
             onChange={(e) => handleFileUpload(e, 'video')}
           />

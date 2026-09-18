@@ -16,7 +16,6 @@ import {
   ArrowRight,
   Eye,
   Camera,
-  Layers,
   CircleDashed,
   Megaphone,
   Droplet,
@@ -108,8 +107,10 @@ export const CitizenDashboard: React.FC = () => {
 
   const [trackingInput, setTrackingInput] = useState('');
 
-  // Citizen's reports (all challenges or user's submitted challenges)
-  const myReports = challenges;
+  // Citizen's reports — only challenges submitted by this user
+  const myReports = challenges.filter(
+    (c) => c.submittedBy?.userId === currentUser.id
+  );
 
   // 4 Simple Summary KPI Cards (Section 5)
   const stats = {
@@ -127,7 +128,7 @@ export const CitizenDashboard: React.FC = () => {
   };
 
   const recentReports = myReports.slice(0, 4);
-  const communityDiscovery = challenges.slice(0, 3);
+
 
   return (
     <div className="space-y-8 font-sans-body">
@@ -502,88 +503,6 @@ export const CitizenDashboard: React.FC = () => {
             })}
           </div>
         )}
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 4. EXPLORE COMMUNITY CHALLENGES PREVIEW (MATCHING SECTION 25) */}
-      {/* ========================================================================= */}
-      <div className="bg-gradient-to-br from-amber-50/50 via-white to-amber-50/20 rounded-3xl p-6 sm:p-8 border border-amber-200/70 shadow-2xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <Compass className="w-5 h-5 text-amber-600" />
-              <span>Explore Community Challenges in Jharkhand</span>
-            </h2>
-            <p className="text-xs text-slate-600">
-              Browse issues reported across all 24 districts and follow community solutions.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setCurrentView('explore-challenges')}
-            className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl border border-slate-300 shadow-2xs transition-colors self-start sm:self-auto cursor-pointer"
-          >
-            Browse All 24 Districts &rarr;
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {communityDiscovery.map((ch) => {
-            const statusInfo = getCitizenStatusLabel(ch.status, ch.isReopened);
-            const trustInfo = getCitizenTrustStatus(ch);
-
-            return (
-              <div
-                key={ch.id}
-                className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between space-y-3"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono font-bold text-slate-500">
-                      {ch.id}
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusInfo.bg} ${statusInfo.border} ${statusInfo.color}`}
-                    >
-                      {statusInfo.label}
-                    </span>
-                  </div>
-
-                  <h4
-                    onClick={() => navigateToChallenge(ch.id)}
-                    className="text-xs font-bold text-slate-900 hover:text-amber-800 transition-colors line-clamp-2 cursor-pointer"
-                  >
-                    {ch.title}
-                  </h4>
-
-                  <div className="text-[11px] text-slate-500 space-y-1">
-                    <div className="flex items-center gap-1 font-medium text-slate-700">
-                      <MapPin className="w-3 h-3 text-amber-600" />
-                      <span>{ch.district} District</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Layers className="w-3 h-3 text-slate-400" />
-                      <span>{ch.category}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] text-slate-500">
-                    {trustInfo.label}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => navigateToChallenge(ch.id)}
-                    className="text-xs font-bold text-amber-700 hover:text-amber-800 cursor-pointer"
-                  >
-                    View &rarr;
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
