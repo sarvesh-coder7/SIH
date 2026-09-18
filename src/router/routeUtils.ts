@@ -98,6 +98,7 @@ Object.entries(VIEW_ROUTE_MAP).forEach(([view, route]) => {
 ROUTE_VIEW_MAP[''] = 'landing';
 ROUTE_VIEW_MAP['/'] = 'landing';
 ROUTE_VIEW_MAP['/landing'] = 'landing';
+ROUTE_VIEW_MAP['/role_selection'] = 'role-selection';
 ROUTE_VIEW_MAP['/citizen-dashboard'] = 'citizen-dashboard';
 ROUTE_VIEW_MAP['/university-dashboard'] = 'university-dashboard';
 ROUTE_VIEW_MAP['/industry-dashboard'] = 'industry-dashboard';

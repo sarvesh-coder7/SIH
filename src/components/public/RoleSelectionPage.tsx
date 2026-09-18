@@ -21,6 +21,7 @@ import {
   EyeOff,
   AlertCircle,
   X,
+  HelpCircle,
 } from 'lucide-react';
 
 interface RoleCardData {
@@ -459,7 +460,7 @@ export const RoleSelectionPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 4. BOTTOM TRUST FOOTER & CONTINUE BUTTON (MATCHING SCREENSHOT 2) */}
       {/* ========================================================================= */}
-      <div className="relative z-10 w-full text-center space-y-2.5 pt-1.5 border-t border-[#e2d6bc]/80 shrink-0">
+      <div className="relative z-10 w-full text-center space-y-2.5 pt-1.5 -mt-6 border-t border-[#e2d6bc]/80 shrink-0">
         {/* Shield Trust Note */}
         <div className="flex flex-col items-center justify-center gap-0.5 max-w-lg mx-auto">
           <div className="flex items-center gap-1.5 text-xs font-serif-quote italic font-bold text-amber-900">
@@ -480,16 +481,6 @@ export const RoleSelectionPage: React.FC = () => {
           >
             <span>Continue as {selectedRole.title}</span>
             <ArrowRight className="w-4 h-4" />
-          </button>
-
-          {/* Instant Evaluation Demo Bypass for Judges */}
-          <button
-            type="button"
-            onClick={handleDirectDashboardAccess}
-            className="w-full sm:w-auto px-4 py-2.5 sm:py-3 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold rounded-xl border border-slate-300 shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Demo Fast-Pass ({selectedRole.demoAccount.name.split('(')[0].trim()})</span>
           </button>
         </div>
       </div>

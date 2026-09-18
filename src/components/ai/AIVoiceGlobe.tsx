@@ -43,9 +43,11 @@ function Earth({ state }: { state: VoiceGlobeState }) {
 
                 <meshStandardMaterial
                     map={earthTexture}
-                    color="#ffffff"
-                    roughness={0.4}
-                    metalness={0.1}
+                    color="#22B982"
+                    roughness={0.6}
+                    metalness={0.2}
+                    emissive="#087F63"
+                    emissiveIntensity={0.6}
                 />
             </mesh>
 
@@ -54,9 +56,9 @@ function Earth({ state }: { state: VoiceGlobeState }) {
                 <sphereGeometry args={[1, 64, 64]} />
 
                 <meshBasicMaterial
-                    color="#ff9a30"
+                    color="#FF9D16"
                     transparent
-                    opacity={0.15}
+                    opacity={0.28}
                     side={THREE.BackSide}
                     blending={THREE.AdditiveBlending}
                 />
@@ -67,9 +69,9 @@ function Earth({ state }: { state: VoiceGlobeState }) {
                 <sphereGeometry args={[1, 64, 64]} />
 
                 <meshBasicMaterial
-                    color="#ffb850"
+                    color="#FFB52E"
                     transparent
-                    opacity={0.1}
+                    opacity={0.15}
                     side={THREE.BackSide}
                     blending={THREE.AdditiveBlending}
                 />

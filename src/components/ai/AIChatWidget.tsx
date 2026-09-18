@@ -48,7 +48,7 @@ You can ask me questions or type commands like **"open report"**, **"track compl
 };
 
 export const AIChatWidget: React.FC = () => {
-  const { currentRole, switchRole, setCurrentView, showToast } = useApp();
+  const { currentRole, switchRole, setCurrentView, showToast, currentView } = useApp();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE]);
   const [inputText, setInputText] = useState('');
@@ -471,6 +471,10 @@ export const AIChatWidget: React.FC = () => {
     setCurrentView(chip.view);
     showToast('info', 'Navigated', `Switched to ${chip.label}`);
   };
+
+  if (currentView === 'landing' || currentView === 'role-selection' || currentView === 'login' || currentView === 'signup') {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">

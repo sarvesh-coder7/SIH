@@ -36,11 +36,11 @@ export const Footer: React.FC = () => {
         {/* We can use a subtle background gradient or leave it clean */}
       </div>
 
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 lg:gap-7">
           
           {/* Col 1: Branding & Social (Spans 3 cols) */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-3 space-y-2.5">
             <div className="flex items-center gap-3">
               <JharkhandEmblem size={52} className="shrink-0 drop-shadow-sm" />
               <div className="flex flex-col">
@@ -63,7 +63,7 @@ export const Footer: React.FC = () => {
               Ideas today. A stronger tomorrow.
             </p>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-1">
               <a href="#" className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-300 hover:text-slate-900 transition-colors">
                 <Linkedin className="w-4 h-4" />
               </a>
@@ -80,9 +80,9 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Col 2: Quick Links (Spans 2 cols) */}
-          <div className="lg:col-span-2 space-y-3">
-            <h4 className="font-bold text-slate-900 text-base mb-4">Quick Links</h4>
-            <ul className="space-y-3 text-[13px] text-slate-600">
+          <div className="lg:col-span-2 space-y-2">
+            <h4 className="font-bold text-slate-900 text-base mb-2.5">Quick Links</h4>
+            <ul className="space-y-2 text-[13px] text-slate-600">
               {[
                 { label: 'Explore Challenges', view: 'explore-challenges' },
                 { label: 'Submit a Challenge', view: 'submit-challenge' },
@@ -106,9 +106,9 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Col 3: Innovation Domains (Spans 2 cols) */}
-          <div className="lg:col-span-2 space-y-3 border-l-0 lg:border-l lg:border-slate-200 lg:pl-8">
-            <h4 className="font-bold text-slate-900 text-base mb-4">Innovation Domains</h4>
-            <ul className="space-y-3 text-[13px] text-slate-600">
+          <div className="lg:col-span-2 space-y-2 border-l-0 lg:border-l lg:border-slate-200 lg:pl-8">
+            <h4 className="font-bold text-slate-900 text-base mb-2.5">Innovation Domains</h4>
+            <ul className="space-y-2 text-[13px] text-slate-600">
               <li className="flex items-center gap-3">
                 <Droplet className="w-4 h-4 text-blue-500 shrink-0" />
                 <span>Water & Sanitation</span>
@@ -129,7 +129,7 @@ export const Footer: React.FC = () => {
                 <Sun className="w-4 h-4 text-green-600 shrink-0" />
                 <span>Environment & Energy</span>
               </li>
-              <li className="pt-1.5">
+              <li className="pt-1">
                 <button 
                   onClick={() => setCurrentView('explore-challenges')} 
                   className="group flex items-center gap-1.5 text-slate-500 hover:text-emerald-700 font-medium transition-colors"
@@ -146,9 +146,9 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Col 4: Contact & Support (Spans 2 cols) */}
-          <div className="lg:col-span-2 space-y-3 border-l-0 lg:border-l lg:border-slate-200 lg:pl-8">
-            <h4 className="font-bold text-slate-900 text-base mb-4">Contact & Support</h4>
-            <div className="space-y-3.5 text-[13px] text-slate-600">
+          <div className="lg:col-span-2 space-y-2 border-l-0 lg:border-l lg:border-slate-200 lg:pl-8">
+            <h4 className="font-bold text-slate-900 text-base mb-2.5">Contact & Support</h4>
+            <div className="space-y-2.5 text-[13px] text-slate-600">
               <div className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <span className="leading-relaxed">Yojana Bhawan, Doranda,<br/>Ranchi, Jharkhand - 834002</span>
@@ -157,14 +157,14 @@ export const Footer: React.FC = () => {
                 <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                 <span>innovation-he@jharkhand.gov.in</span>
               </div>
-              <div className="flex items-start gap-3 py-1">
+              <div className="flex items-start gap-3">
                 <Phone className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-900 text-[17px] tracking-tight">1800-345-6540</span>
                   <span className="text-[11px] text-slate-500 font-medium">Toll-Free PMU Desk</span>
                 </div>
               </div>
-              <div className="flex items-start gap-3 pt-1">
+              <div className="flex items-start gap-3">
                 <Headphones className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-900">Help & Support</span>
@@ -177,9 +177,9 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Col 5: Our Initiatives (Spans 3 cols) */}
-          <div className="lg:col-span-3 space-y-3 border-l-0 lg:border-l lg:border-slate-200 lg:pl-8">
-            <h4 className="font-bold text-slate-900 text-base mb-4">Our Initiatives</h4>
-            <div className="space-y-3">
+          <div className="lg:col-span-3 space-y-2 border-l-0 lg:border-l lg:border-slate-200 lg:pl-8">
+            <h4 className="font-bold text-slate-900 text-base mb-2.5">Our Initiatives</h4>
+            <div className="space-y-2">
               
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between group hover:border-emerald-200 hover:shadow-xs transition-all cursor-pointer">
                 <div className="flex items-center gap-3">
@@ -220,7 +220,7 @@ export const Footer: React.FC = () => {
       </div>
 
       {/* Copyright and Bottom Meta */}
-      <div className="bg-[#f0f2f5] py-5">
+      <div className="bg-[#f0f2f5] py-3">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-slate-600 font-medium">
           <p>
             &copy; {new Date().getFullYear()} Government of Jharkhand. Designed & Developed for Smart India Hackathon 2026 (Phase 1 - Frontend Prototype).

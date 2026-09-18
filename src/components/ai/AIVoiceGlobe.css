@@ -90,9 +90,9 @@
   overflow: visible;
 
   filter:
-    drop-shadow(0 0 10px rgba(255, 145, 0, .90))
-    drop-shadow(0 0 24px rgba(255, 130, 0, .58))
-    drop-shadow(0 0 52px rgba(255, 175, 35, .34));
+    drop-shadow(0 0 8px rgba(255, 166, 35, 0.95))
+    drop-shadow(0 0 20px rgba(255, 139, 20, 0.62))
+    drop-shadow(0 0 42px rgba(11, 155, 117, 0.30));
 
   animation: globeFloat 3s ease-in-out infinite;
 }
@@ -226,9 +226,9 @@
 /* Processing */
 .ai-voice-globe-overlay.is-processing .ai-globe-canvas {
   filter:
-    drop-shadow(0 0 12px rgba(255, 145, 0, 1))
-    drop-shadow(0 0 30px rgba(255, 120, 0, .72))
-    drop-shadow(0 0 58px rgba(255, 180, 50, .40));
+    drop-shadow(0 0 10px rgba(255, 181, 46, 1))
+    drop-shadow(0 0 26px rgba(255, 122, 0, 0.72))
+    drop-shadow(0 0 52px rgba(11, 155, 117, 0.38));
   animation: processingPulse 1.2s ease-in-out infinite;
 }
 
