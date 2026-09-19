@@ -45,7 +45,7 @@ export type AppView =
   | 'login'
   | 'signup'
   | 'about'
-  | 'how-it-works'
+
   | 'explore-challenges'
   | 'challenge-detail'
   | 'citizen-challenge-detail'

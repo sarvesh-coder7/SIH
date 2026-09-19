@@ -21,20 +21,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-// Brevo SMTP (Nodemailer relay)
-const brevoSmtpHost = process.env.BREVO_SMTP_HOST;
-const brevoSmtpPort = parseInt(process.env.BREVO_SMTP_PORT || '587', 10);
-const brevoSmtpUser = process.env.BREVO_SMTP_USER;       // SMTP login (e.g. b7401e001@smtp-brevo.com)
-const brevoSmtpPass = process.env.BREVO_SMTP_PASSWORD;    // SMTP password (xsmtpsib-…)
-const brevoSenderEmail = process.env.BREVO_SENDER_EMAIL;  // Verified sender (e.g. sarvesshhh@gmail.com)
-const brevoSenderName = process.env.BREVO_SENDER_NAME || 'JH Innovation Connect - Govt of Jharkhand';
+// SMTP Configuration
+const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASSWORD;
+const senderEmail = process.env.SENDER_EMAIL || smtpUser;
+const senderName = process.env.SENDER_NAME || 'JH Innovation Connect - Govt of Jharkhand';
 
-// Brevo HTTP API (separate key — xkeysib-…)
-const brevoApiKey = process.env.BREVO_API_KEY;            // HTTP API key only
-
-const hasBrevoSmtp = Boolean(brevoSmtpUser && brevoSmtpPass);
-const hasBrevoApi = Boolean(brevoApiKey);
-const hasAnyEmail = hasBrevoSmtp || hasBrevoApi;
+const hasSmtp = Boolean(smtpUser && smtpPass);
 
 // =============================================================================
 // DIAGNOSTICS (never print secret values)
@@ -44,9 +39,8 @@ console.log('   JH INNOVATION CONNECT - API & AUTH SERVER');
 console.log('====================================================');
 console.log('• Supabase URL:     ', supabaseUrl ? '✓ Configured' : '✗ Missing');
 console.log('• Supabase Key:     ', supabaseKey ? '✓ Configured' : '✗ Missing');
-console.log('• Brevo SMTP:       ', hasBrevoSmtp ? `✓ Configured (${brevoSmtpUser})` : '✗ Not configured');
-console.log('• Brevo HTTP API:   ', hasBrevoApi ? '✓ Configured' : '✗ Not configured');
-console.log('• Sender Email:     ', brevoSenderEmail || '(not set — will use SMTP user)');
+console.log('• SMTP Config:      ', hasSmtp ? `✓ Configured (${smtpUser})` : '✗ Not configured');
+console.log('• Sender Email:     ', senderEmail || '(not set)');
 console.log('====================================================');
 
 // =============================================================================
@@ -93,67 +87,36 @@ const verifyLimiter = rateLimit({
 });
 
 // =============================================================================
-// NODEMAILER TRANSPORTER (Brevo SMTP)
+// NODEMAILER TRANSPORTER (SMTP)
 // =============================================================================
 let transporter = null;
 let smtpVerified = false;
-const fromAddress = brevoSenderEmail || brevoSmtpUser || 'no-reply@jharkhand.gov.in';
+const fromAddress = senderEmail || smtpUser || 'no-reply@jharkhand.gov.in';
 
-if (hasBrevoSmtp) {
+if (hasSmtp) {
   try {
     transporter = nodemailer.createTransport({
-      host: brevoSmtpHost || 'smtp-relay.brevo.com',
-      port: brevoSmtpPort,
-      secure: brevoSmtpPort === 465,
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
       auth: {
-        user: brevoSmtpUser,
-        pass: brevoSmtpPass,
+        user: smtpUser,
+        pass: smtpPass,
       },
     });
 
     transporter.verify().then(() => {
       smtpVerified = true;
-      console.log(`✓ SMTP connection verified (${brevoSmtpHost || 'smtp-relay.brevo.com'}:${brevoSmtpPort})`);
+      console.log(`✓ SMTP connection verified (${smtpHost}:${smtpPort})`);
     }).catch((err) => {
       console.warn(`⚠️ SMTP verification failed: ${err.message}`);
-      if (hasBrevoApi) {
-        console.log('  → Brevo HTTP API will be used as fallback.');
-      } else {
-        console.error('  ✗ No fallback email method available. OTP emails will not be delivered.');
-      }
+      console.error('  ✗ OTP emails will not be delivered.');
     });
   } catch (e) {
     console.error('✗ SMTP transporter init failed:', e.message);
   }
-} else if (!hasBrevoApi) {
+} else {
   console.warn('⚠️ No email delivery configured. OTP emails cannot be sent.');
-}
-
-// =============================================================================
-// BREVO HTTP API — fallback that bypasses SMTP IP restrictions
-// =============================================================================
-async function sendViaBrevoApi(toEmail, subject, htmlContent, textContent) {
-  if (!brevoApiKey) throw new Error('BREVO_API_KEY is not configured.');
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'accept': 'application/json',
-      'api-key': brevoApiKey,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      sender: { name: brevoSenderName, email: fromAddress },
-      to: [{ email: toEmail }],
-      subject,
-      htmlContent,
-      textContent,
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(`Brevo API ${res.status}: ${body.message || JSON.stringify(body)}`);
-  }
-  return await res.json();
 }
 
 // =============================================================================
@@ -197,44 +160,33 @@ function buildOtpEmail(otp) {
 }
 
 // =============================================================================
-// SEND EMAIL — tries SMTP first, falls back to HTTP API
+// SEND EMAIL — uses SMTP
 // =============================================================================
 async function sendOtpEmail(toEmail, otp) {
   const subject = 'Verification OTP - JH Innovation Connect';
   const { html, text } = buildOtpEmail(otp);
 
-  // Strategy 1: SMTP (if verified)
-  if (transporter && smtpVerified) {
-    try {
-      const info = await transporter.sendMail({
-        from: { name: brevoSenderName, address: fromAddress },
-        to: toEmail,
-        subject,
-        text,
-        html,
-      });
-      if (!info.rejected || info.rejected.length === 0) {
-        console.log(`✓ Email sent via SMTP to ${toEmail}`);
-        return true;
-      }
-    } catch (err) {
-      console.warn(`⚠️ SMTP send failed: ${err.message}`);
-    }
+  if (!transporter) {
+    return { success: false, error: 'Email delivery is not configured on the server.' };
   }
 
-  // Strategy 2: Brevo HTTP API (bypasses IP restrictions)
-  if (hasBrevoApi) {
-    try {
-      await sendViaBrevoApi(toEmail, subject, html, text);
-      console.log(`✓ Email sent via Brevo HTTP API to ${toEmail}`);
-      return true;
-    } catch (err) {
-      console.warn(`⚠️ Brevo API send failed: ${err.message}`);
+  try {
+    const info = await transporter.sendMail({
+      from: { name: senderName, address: fromAddress },
+      to: toEmail,
+      subject,
+      text,
+      html,
+    });
+    if (!info.rejected || info.rejected.length === 0) {
+      console.log(`✓ Email sent via SMTP to ${toEmail}`);
+      return { success: true };
     }
+    return { success: false, error: 'Email was rejected by the SMTP server.' };
+  } catch (err) {
+    console.warn(`⚠️ SMTP send failed: ${err.message}`);
+    return { success: false, error: `SMTP error: ${err.message}` };
   }
-
-  console.error(`✗ All email delivery methods failed for ${toEmail}`);
-  return false;
 }
 
 // =============================================================================
@@ -247,8 +199,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: 'JH Innovation Connect Backend API',
     uptimeSeconds: Math.floor(process.uptime()),
-    smtpConfigured: hasBrevoSmtp,
-    apiConfigured: hasBrevoApi,
+    smtpConfigured: hasSmtp,
     supabaseConfigured: Boolean(supabase),
     timestamp: new Date().toISOString()
   });
@@ -265,7 +216,7 @@ app.post('/api/send-otp', otpLimiter, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Valid email address is required.' });
   }
 
-  if (!hasAnyEmail) {
+  if (!hasSmtp) {
     return res.status(503).json({ success: false, error: 'Email delivery is not configured on this server.' });
   }
 
@@ -287,14 +238,14 @@ app.post('/api/send-otp', otpLimiter, async (req, res) => {
     });
 
     // Actually send the email
-    const delivered = await sendOtpEmail(cleanEmail, otp);
+    const deliveryResult = await sendOtpEmail(cleanEmail, otp);
 
-    if (!delivered) {
+    if (!deliveryResult.success) {
       // Delete the OTP since it can't be delivered
       otpStore.delete(cleanEmail);
       return res.status(502).json({
         success: false,
-        error: 'Failed to send OTP email. Please check server email configuration and try again.',
+        error: deliveryResult.error || 'Failed to send OTP email. Please check server email configuration and try again.',
       });
     }
 
@@ -415,10 +366,11 @@ const startServer = (port) => {
   });
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.warn(`⚠️ Port ${port} in use, trying ${port + 1}...`);
-      startServer(port + 1);
+      console.error(`✗ Port ${port} is already in use. Please free up the port to start the backend.`);
+      process.exit(1);
     } else {
       console.error('Server error:', err);
+      process.exit(1);
     }
   });
 };

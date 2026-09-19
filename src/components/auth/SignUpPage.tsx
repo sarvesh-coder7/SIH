@@ -4,6 +4,7 @@ import { UserRole } from '../../types';
 import { authService } from '../../services/authService';
 import { SIX_ROLES, RoleConfig } from '../common/RoleCarousel';
 import { EmailVerificationModal } from './EmailVerificationModal';
+import assemblyHeroImg from '../../assets/images/jharkhand_assembly_1788342750288.jpg';
 import { JHARKHAND_DISTRICTS } from '../../mock/data';
 import { AuthUser } from '../../types/auth';
 import {
@@ -24,18 +25,24 @@ import {
   MapPin,
   FileCheck2,
   Info,
+  X,
 } from 'lucide-react';
 
 interface SignUpPageProps {
   initialRole?: UserRole;
   onNavigateToLogin?: () => void;
   onNavigateToRoleSelection?: () => void;
+  asInlineCard?: boolean;
+  /** Called when registration succeeds and OTP verification is required (inline mode) */
+  onVerificationRequired?: (user: AuthUser) => void;
 }
 
 export const SignUpPage: React.FC<SignUpPageProps> = ({
   initialRole,
   onNavigateToLogin,
   onNavigateToRoleSelection,
+  asInlineCard,
+  onVerificationRequired,
 }) => {
   const { currentRole, switchRole, setCurrentView, showToast, setCurrentUser } = useApp();
 
@@ -148,7 +155,11 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     if (res.success && res.user) {
       if (res.requiresVerification) {
-        setPendingVerificationUser(res.user as AuthUser);
+        if (asInlineCard && onVerificationRequired) {
+          onVerificationRequired(res.user as AuthUser);
+        } else {
+          setPendingVerificationUser(res.user as AuthUser);
+        }
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
@@ -195,7 +206,11 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     if (res.success && res.user) {
       if (res.requiresVerification) {
-        setPendingVerificationUser(res.user as AuthUser);
+        if (asInlineCard && onVerificationRequired) {
+          onVerificationRequired(res.user as AuthUser);
+        } else {
+          setPendingVerificationUser(res.user as AuthUser);
+        }
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
@@ -235,7 +250,11 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     if (res.success && res.user) {
       if (res.requiresVerification) {
-        setPendingVerificationUser(res.user as AuthUser);
+        if (asInlineCard && onVerificationRequired) {
+          onVerificationRequired(res.user as AuthUser);
+        } else {
+          setPendingVerificationUser(res.user as AuthUser);
+        }
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
@@ -282,7 +301,11 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     if (res.success && res.user) {
       if (res.requiresVerification) {
-        setPendingVerificationUser(res.user as AuthUser);
+        if (asInlineCard && onVerificationRequired) {
+          onVerificationRequired(res.user as AuthUser);
+        } else {
+          setPendingVerificationUser(res.user as AuthUser);
+        }
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
@@ -324,7 +347,11 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
     if (res.success && res.user) {
       if (res.requiresVerification) {
-        setPendingVerificationUser(res.user as AuthUser);
+        if (asInlineCard && onVerificationRequired) {
+          onVerificationRequired(res.user as AuthUser);
+        } else {
+          setPendingVerificationUser(res.user as AuthUser);
+        }
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
@@ -339,23 +366,26 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
 
   const IconComp = roleConfig.icon;
 
-  return (
-    <div className={`w-full mx-auto py-4 sm:py-8 space-y-6 animate-in fade-in duration-200 ${roleConfig.role === 'citizen' ? 'max-w-[540px]' : 'max-w-2xl'}`}>
-      {/* Back Button */}
-      <div className="flex items-center justify-between">
+  const cardContent = (
+    <div className={`relative z-20 w-full mx-auto animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300 flex flex-col justify-center max-h-full ${roleConfig.role === 'citizen' ? 'max-w-[480px]' : 'max-w-2xl'}`}>
+      {/* Render internal EmailVerificationModal only in standalone (non-inline) mode */}
+
+      {/* Header Close/Back Nav */}
+      {roleConfig.role !== 'citizen' && (
+      <div className="absolute bottom-full left-0 right-0 flex items-center justify-between mb-3 px-2">
         <button
           type="button"
           onClick={() => {
             if (onNavigateToRoleSelection) onNavigateToRoleSelection();
             else setCurrentView('role-selection');
           }}
-          className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors py-1 group ${roleConfig.role === 'citizen' ? 'text-slate-500 hover:text-[#0B1228]' : 'text-slate-600 hover:text-emerald-800'}`}
+          className={`inline-flex items-center gap-1.5 text-xs font-semibold transition-colors py-1 group text-slate-300 hover:text-white`}
         >
           <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span>Change Role / Back to Carousel</span>
+          <span>Change Role / Back</span>
         </button>
 
-        <div className={`text-xs ${roleConfig.role === 'citizen' ? 'text-slate-500' : 'text-slate-600'}`}>
+        <div className="text-xs text-slate-300">
           Already have an account?{' '}
           <button
             type="button"
@@ -363,29 +393,41 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
               if (onNavigateToLogin) onNavigateToLogin();
               else setCurrentView('login');
             }}
-            className={`font-bold underline transition-colors ${roleConfig.role === 'citizen' ? 'text-[#F59A00] hover:text-[#FF9800]' : 'text-emerald-800 hover:text-emerald-950'}`}
+            className={`font-bold underline transition-colors text-white hover:text-slate-200`}
           >
             Log In &rarr;
           </button>
         </div>
       </div>
+      )}
 
       {/* Main Registration Card */}
-      <div className={`bg-white shadow-xl overflow-hidden ${roleConfig.role === 'citizen' ? 'rounded-[24px] border border-[#D8DEE8]' : 'rounded-3xl border border-[#e2d6bc]'}`}>
+      <div className={`bg-white shadow-xl overflow-hidden overflow-y-auto max-h-[85vh] ${roleConfig.role === 'citizen' ? 'rounded-[18px] border border-[#D8DEE8]' : 'rounded-3xl border border-[#e2d6bc]'}`}>
         {/* Header Banner */}
         {roleConfig.role === 'citizen' ? (
-          <div className="p-6 sm:p-7 bg-[#0B1228] text-white relative overflow-hidden">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1.5">
-                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Citizen / Community Sign Up
+          <div className="px-5 py-4 bg-[#0B1228] text-white relative overflow-hidden">
+            <button
+              type="button"
+              onClick={() => {
+                if (onNavigateToRoleSelection) onNavigateToRoleSelection();
+                else if (onNavigateToLogin) onNavigateToLogin();
+                else setCurrentView('role-selection');
+              }}
+              className="absolute right-3.5 top-3.5 p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors z-10 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-[10px] bg-[#F59A00] flex items-center justify-center shadow-md shrink-0 text-white">
+                <IconComp className="w-5 h-5" />
+              </div>
+              <div className="space-y-0.5">
+                <h2 className="text-base font-bold text-white tracking-tight leading-tight">
+                  Citizen Registration
                 </h2>
-                <p className="text-xs text-slate-300">
+                <p className="text-[11px] text-slate-400 leading-tight">
                   Create your account to report and solve community challenges
                 </p>
-              </div>
-              <div className="w-12 h-12 rounded-[14px] bg-[#F59A00] flex items-center justify-center shadow-lg shrink-0 text-white">
-                <IconComp className="w-6 h-6" />
               </div>
             </div>
           </div>
@@ -415,7 +457,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
         )}
 
         {/* Form Body */}
-        <div className="p-6 sm:p-8 space-y-6">
+        <div className={`space-y-6 ${roleConfig.role === 'citizen' ? 'px-5 py-4 space-y-4' : 'p-6 sm:p-8'}`}>
           {errorMessage && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800 flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
@@ -427,16 +469,16 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
           {/* 1. CITIZEN REGISTRATION FORM (SIMPLE, NO JARGON) */}
           {/* ==================================================== */}
           {roleConfig.role === 'citizen' && (
-            <form onSubmit={handleCitizenSubmit} className="space-y-5">
-              <div className="px-4 py-3 bg-[#FFF9F0] border border-[#FDE1B9] rounded-xl text-[11px] text-[#805B24] flex items-center gap-2.5">
-                <Info className="w-4 h-4 text-[#F59A00] shrink-0" />
+            <form onSubmit={handleCitizenSubmit} className="space-y-3.5">
+              <div className="px-3 py-2.5 bg-[#FFF9F0] border border-[#FDE1B9] rounded-lg text-[10px] text-[#805B24] flex items-center gap-2">
+                <Info className="w-3.5 h-3.5 text-[#F59A00] shrink-0" />
                 <span className="leading-tight">
                   <strong>Simple 2-Minute Registration:</strong> Report and track community issues directly with universities and government departments.
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#10182D] mb-1.5">
+                <label className="block text-[11px] font-semibold text-[#10182D] mb-1">
                   Full Name <span className="text-[#F59A00]">*</span>
                 </label>
                 <input
@@ -445,13 +487,13 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                   placeholder="e.g. Sunita Devi or Ramesh Soren"
                   value={citName}
                   onChange={(e) => setCitName(e.target.value)}
-                  className="w-full p-3 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-xl focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
+                  className="w-full px-3 py-2.5 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-lg focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#10182D] mb-1.5">
+                  <label className="block text-[11px] font-semibold text-[#10182D] mb-1">
                     Email Address <span className="text-[#F59A00]">*</span>
                   </label>
                   <input
@@ -460,15 +502,15 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     placeholder="e.g. yourname@gmail.com"
                     value={citEmail}
                     onChange={(e) => setCitEmail(e.target.value)}
-                    className="w-full p-3 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-xl focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
+                    className="w-full px-3 py-2.5 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-lg focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
                   />
-                  <span className="text-[10px] text-slate-500 mt-1 block">
+                  <span className="text-[9px] text-slate-500 mt-0.5 block">
                     Verification code will be sent
                   </span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#10182D] mb-1.5">
+                  <label className="block text-[11px] font-semibold text-[#10182D] mb-1">
                     Mobile Number <span className="text-[#F59A00]">*</span>
                   </label>
                   <input
@@ -477,13 +519,13 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     placeholder="e.g. 98351 44210"
                     value={citPhone}
                     onChange={(e) => setCitPhone(e.target.value)}
-                    className="w-full p-3 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-xl focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
+                    className="w-full px-3 py-2.5 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-lg focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#10182D] mb-1.5">
+                <label className="block text-[11px] font-semibold text-[#10182D] mb-1">
                   Password <span className="text-[#F59A00]">*</span>
                 </label>
                 <input
@@ -492,26 +534,26 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                   placeholder="Create a secure password (min 6 characters)"
                   value={citPassword}
                   onChange={(e) => setCitPassword(e.target.value)}
-                  className="w-full p-3 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-xl focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
+                  className="w-full px-3 py-2.5 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-lg focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
                 />
               </div>
 
               {/* Location Section */}
-              <div className="pt-4 mt-2 border-t border-[#F4F6F8] space-y-4">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#10182D]">
-                  <MapPin className="w-4 h-4 text-[#F59A00]" />
+              <div className="pt-3 mt-1 border-t border-[#F4F6F8] space-y-3">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#10182D]">
+                  <MapPin className="w-3.5 h-3.5 text-[#F59A00]" />
                   <span>Your Location in Jharkhand</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-[#10182D] mb-1.5">
+                    <label className="block text-[11px] font-semibold text-[#10182D] mb-1">
                       District
                     </label>
                     <select
                       value={citDistrict}
                       onChange={(e) => setCitDistrict(e.target.value)}
-                      className="w-full p-3 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-xl focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] transition-shadow"
+                      className="w-full px-3 py-2.5 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-lg focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] transition-shadow"
                     >
                       {JHARKHAND_DISTRICTS.map((d) => (
                         <option key={d} value={d}>
@@ -522,7 +564,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#10182D] mb-1.5">
+                    <label className="block text-[11px] font-semibold text-[#10182D] mb-1">
                       Block
                     </label>
                     <input
@@ -530,13 +572,13 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                       placeholder="e.g. Torpa / Ratu"
                       value={citBlock}
                       onChange={(e) => setCitBlock(e.target.value)}
-                      className="w-full p-3 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-xl focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
+                      className="w-full px-3 py-2.5 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-lg focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#10182D] mb-1.5">
+                  <label className="block text-[11px] font-semibold text-[#10182D] mb-1">
                     Village / Ward (Optional)
                   </label>
                   <input
@@ -544,16 +586,16 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
                     placeholder="e.g. Diyakel"
                     value={citVillage}
                     onChange={(e) => setCitVillage(e.target.value)}
-                    className="w-full p-3 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-xl focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
+                    className="w-full px-3 py-2.5 text-xs text-[#10182D] bg-white border border-[#D8DEE8] rounded-lg focus:outline-none focus:border-[#F59A00] focus:ring-1 focus:ring-[#F59A00] placeholder:text-slate-400 transition-shadow"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 mt-2">
+              <div className="pt-3 mt-1">
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3.5 px-4 bg-[#F59A00] hover:bg-[#FF9800] text-white rounded-xl text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
+                  className="w-full py-3 px-4 bg-[#F59A00] hover:bg-[#FF9800] text-white rounded-lg text-[13px] font-bold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
                 >
                   <span>{isLoading ? 'Creating Account...' : 'Continue to Email Verification'}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1147,35 +1189,57 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
           )}
         </div>
       </div>
+    </div>
+  );
 
-      {/* Email Verification Modal triggered after citizen signup */}
-      {pendingVerificationUser && (
+  if (asInlineCard) {
+    return cardContent;
+  }
+
+  return (
+    <div className="relative w-full h-screen max-h-screen flex flex-col justify-center overflow-hidden bg-gradient-to-b from-[#fbf8ee] via-[#f7f2e4] to-[#f2ecdb] text-slate-800 font-sans-body selection:bg-emerald-600 selection:text-white">
+      {/* Faint watermark of Jharkhand Vidhan Sabha in background */}
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none mix-blend-multiply overflow-hidden">
+        <img
+          src={assemblyHeroImg}
+          alt="Vidhan Sabha Background Watermark"
+          className="w-full h-full object-cover object-center filter grayscale contrast-125"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#fbf8ee]/90 via-[#f7f2e4]/70 to-[#f2ecdb]/95"></div>
+      </div>
+
+      {/* Dark Overlay (like the Auth modal) */}
+      <div className="absolute inset-0 z-10 bg-slate-950/70 backdrop-blur-xs"></div>
+
+      {!asInlineCard && pendingVerificationUser ? (
         <EmailVerificationModal
-          isOpen={!!pendingVerificationUser}
+          isOpen={true}
           user={pendingVerificationUser}
-          onClose={() => {
-            setPendingVerificationUser(null);
-          }}
+          onClose={() => setPendingVerificationUser(null)}
           onVerified={() => {
             const role = pendingVerificationUser.role;
             setPendingVerificationUser(null);
             
-            // Re-fetch or rely on the authService current user after successful auto-login
-            const authedUser = authService.getCurrentUser();
-            setCurrentUser(authedUser as any);
-            switchRole(role);
-            
-            let dashboardView = 'citizen-dashboard';
-            
-            if (role === 'university_admin') dashboardView = 'university-dashboard';
-            else if (role === 'faculty_mentor') dashboardView = 'university-proposals';
-            else if (role === 'csr_org' || role === 'industry_msme') dashboardView = 'industry-dashboard';
-            else if (role === 'govt_department' || role === 'platform_admin') dashboardView = 'government-dashboard';
-            
-            setCurrentView(dashboardView as any);
-            showToast('success', 'Registration Complete', `Welcome! Your ${role.replace('_', ' ')} account has been verified.`);
+            requestAnimationFrame(() => {
+              const authedUser = authService.getCurrentUser();
+              setCurrentUser(authedUser as any);
+              switchRole(role);
+              
+              let dashboardView = 'citizen-dashboard';
+              if (role === 'university_admin') dashboardView = 'university-dashboard';
+              else if (role === 'faculty_mentor') dashboardView = 'university-proposals';
+              else if (role === 'csr_org' || role === 'industry_msme') dashboardView = 'industry-dashboard';
+              else if (role === 'govt_department' || role === 'platform_admin') dashboardView = 'government-dashboard';
+              
+              setCurrentView(dashboardView as any);
+              showToast('success', 'Registration Complete', `Welcome! Your ${role.replace('_', ' ')} account has been verified.`);
+            });
           }}
+          onBack={() => setPendingVerificationUser(null)}
         />
+      ) : (
+        cardContent
       )}
     </div>
   );

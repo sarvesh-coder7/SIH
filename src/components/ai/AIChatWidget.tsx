@@ -472,7 +472,7 @@ export const AIChatWidget: React.FC = () => {
     showToast('info', 'Navigated', `Switched to ${chip.label}`);
   };
 
-  if (currentView === 'landing' || currentView === 'role-selection' || currentView === 'login' || currentView === 'signup') {
+  if (currentView === 'landing' || currentView === 'role-selection' || currentView === 'login' || currentView === 'signup' || currentView === 'about') {
     return null;
   }
 

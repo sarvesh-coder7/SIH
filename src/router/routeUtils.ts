@@ -13,7 +13,7 @@ export const VIEW_ROUTE_MAP: Record<string, string> = {
   industry: '/industry',
   impact: '/impact',
   'map-view': '/map-view',
-  'how-it-works': '/how-it-works',
+  about: '/about',
   
   // Citizen
   'citizen-dashboard': '/dashboard/citizen',

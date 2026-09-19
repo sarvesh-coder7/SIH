@@ -29,7 +29,7 @@ import { SignUpPage } from '../components/auth/SignUpPage';
 import { ExploreChallengesPage } from '../components/public/ExploreChallengesPage';
 import { UniversitiesPage } from '../components/public/UniversitiesPage';
 import { IndustryPage } from '../components/public/IndustryPage';
-import { HowItWorksPage } from '../components/public/HowItWorksPage';
+import { AboutPage } from '../components/public/AboutPage';
 import { PublicImpactDashboard } from '../components/impact/PublicImpactDashboard';
 import { JharkhandMap } from '../components/map/JharkhandMap';
 
@@ -199,10 +199,10 @@ const industryRoute = createRoute({
   component: IndustryPage,
 });
 
-const howItWorksRoute = createRoute({
+const aboutRoute = createRoute({
   getParentRoute: () => portalLayoutRoute,
-  path: '/how-it-works',
-  component: HowItWorksPage,
+  path: '/about',
+  component: AboutPage,
 });
 
 const impactRoute = createRoute({
@@ -383,7 +383,7 @@ const routeTree = rootRoute.addChildren([
     challengeDetailFallbackRoute,
     universitiesRoute,
     industryRoute,
-    howItWorksRoute,
+    aboutRoute,
     impactRoute,
     mapViewRoute,
     industryDashboardRoute,
