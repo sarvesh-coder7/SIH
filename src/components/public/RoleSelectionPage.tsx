@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
+  HelpCircle,
   X,
   HelpCircle,
 } from 'lucide-react';
