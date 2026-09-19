@@ -27,17 +27,11 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code) {
-      setErrorMsg('Please enter the 6-digit code sent to your email.');
-      return;
-    }
-
+  const submitCode = async (codeToSubmit: string) => {
     setIsVerifying(true);
     setErrorMsg('');
 
-    const res = await authService.verifyEmail(user.id, user.email, code);
+    const res = await authService.verifyEmail(user.id, user.email, codeToSubmit);
     setIsVerifying(false);
 
     if (res.success) {
@@ -45,6 +39,15 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     } else {
       setErrorMsg(res.message);
     }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code || code.length < 6) {
+      setErrorMsg('Please enter the 6-digit code sent to your email.');
+      return;
+    }
+    submitCode(code);
   };
 
   const handleResend = async () => {
@@ -115,7 +118,21 @@ export const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
                 maxLength={6}
                 required
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                  setCode(pasted);
+                  if (pasted.length === 6) {
+                    submitCode(pasted);
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setCode(val);
+                  if (val.length === 6) {
+                    submitCode(val);
+                  }
+                }}
                 placeholder="e.g. 123456"
                 className="w-full text-center font-mono text-xl font-bold tracking-[0.5em] py-3 text-slate-900 bg-[#fbf8ee] border border-[#D8DEE8] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F59A00] focus:border-[#F59A00] placeholder-slate-400"
               />

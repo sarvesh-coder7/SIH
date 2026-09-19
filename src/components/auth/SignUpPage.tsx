@@ -1187,6 +1187,24 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
               </div>
             </div>
           )}
+
+          {/* Unified Login Link at the bottom of the card */}
+          <div className="pt-4 mt-2 pb-2 text-center border-t border-slate-100">
+            <p className="text-xs text-slate-500">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigateToLogin) onNavigateToLogin();
+                  else setCurrentView('login');
+                }}
+                className="font-bold text-[#F59A00] hover:text-[#e08a00] hover:underline transition-colors"
+              >
+                Sign in
+              </button>
+            </p>
+          </div>
+
         </div>
       </div>
     </div>
