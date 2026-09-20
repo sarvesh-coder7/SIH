@@ -2,13 +2,13 @@ import { AuthUser, AuthSession, RolePermissions } from '../types/auth';
 import { UserRole } from '../types';
 import { supabase } from '../lib/supabase';
 
-const toAuthUser = (profile: any, authUser?: any): AuthUser => ({
+const toAuthUser = (profile: any, authUser?: any, citizenProfile?: any): AuthUser => ({
   id: profile.id || authUser?.id,
-  name: profile.name || authUser?.user_metadata?.full_name || authUser?.user_metadata?.first_name || 'User',
-  email: profile.email || authUser?.email || '',
-  phone: profile.phone || authUser?.user_metadata?.phone || '',
+  name: citizenProfile?.full_name || profile.name || authUser?.user_metadata?.full_name || authUser?.user_metadata?.first_name || 'User',
+  email: citizenProfile?.email || profile.email || authUser?.email || '',
+  phone: citizenProfile?.phone || profile.phone || authUser?.user_metadata?.phone || '',
   role: profile.role || authUser?.user_metadata?.role || 'citizen',
-  district: profile.district || authUser?.user_metadata?.district || 'Ranchi',
+  district: citizenProfile?.district || profile.district || authUser?.user_metadata?.district || 'Ranchi',
   organization: profile.organization || authUser?.user_metadata?.organization || undefined,
   designation: profile.designation || authUser?.user_metadata?.designation || undefined,
   verified: Boolean(profile.verified ?? true),
@@ -42,7 +42,13 @@ export class AuthService {
 
   private async syncSessionFromSupabase(user: any, session?: any) {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
-    const mapped = toAuthUser(profile || {}, user);
+    let citizenProfile = null;
+    const role = profile?.role || user?.user_metadata?.role || 'citizen';
+    if (role === 'citizen') {
+      const { data: cp } = await supabase.from('citizen_profiles').select('*').eq('user_id', user.id).maybeSingle();
+      citizenProfile = cp;
+    }
+    const mapped = toAuthUser(profile || {}, user, citizenProfile);
     this.currentSession = {
       token: session?.access_token || '',
       user: mapped,
@@ -81,7 +87,10 @@ export class AuthService {
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: password || '' });
-    if (error || !data.user) return { success:false, message:error?.message || 'Authentication failed. Please check your credentials.' };
+    if (error || !data.user) {
+      const msg = error?.message === 'Invalid login credentials' ? 'Invalid email or password.' : (error?.message || 'Authentication failed. Please check your credentials.');
+      return { success: false, message: msg };
+    }
 
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).maybeSingle();
     const m = data.user.user_metadata || {};
@@ -113,7 +122,13 @@ export class AuthService {
       }
     }
 
-    const mapped = toAuthUser(effectiveProfile, data.user);
+    let citizenProfile = null;
+    if (effectiveProfile.role === 'citizen') {
+      const { data: cp } = await supabase.from('citizen_profiles').select('*').eq('user_id', data.user.id).maybeSingle();
+      citizenProfile = cp;
+    }
+
+    const mapped = toAuthUser(effectiveProfile, data.user, citizenProfile);
     this.currentSession = {
       token: data.session?.access_token || '',
       user: mapped,
@@ -166,9 +181,8 @@ export class AuthService {
         );
         this.pendingAuth = null;
         
-        // If login fails for existing users, that's still a successful verification
-        if (!loginResult.success && data.existingUser) {
-          return { success: true, message: 'Account already exists. Please log in.' };
+        if (!loginResult.success) {
+          return { success: false, message: loginResult.message || 'Verification successful, but login failed. Please log in manually.' };
         }
       }
       
@@ -224,8 +238,9 @@ export class AuthService {
       } as AuthUser;
       
       return { success: true, user, message: 'Verification code sent to your email.', requiresVerification: true };
-    } catch {
-      return { success: false, user: undefined, message: 'Cannot connect to server. Please try again.', requiresVerification: false };
+    } catch (err: any) {
+      console.error('Fetch error in signUpWithProfile:', err);
+      return { success: false, user: undefined, message: `Cannot connect to server. ${err.message}`, requiresVerification: false };
     }
   }
 

@@ -696,7 +696,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
               </div>
 
               {/* Unique Academic Capabilities */}
-              <div className="pt-2 border-t border-slate-100 space-y-3">
+              <div className="pt-2 border-t border-[#F4F6F8] space-y-3">
                 <div className="text-xs font-bold text-slate-800">
                   Institutional Capabilities & Research Infrastructure
                 </div>
@@ -742,7 +742,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
               </div>
 
               {/* Authorized Contact */}
-              <div className="pt-2 border-t border-slate-100 space-y-2">
+              <div className="pt-2 border-t border-[#F4F6F8] space-y-2">
                 <div className="text-xs font-bold text-slate-800">
                   Authorized Institutional Representative (Dean / Director / Coordinator)
                 </div>
@@ -1189,7 +1189,7 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
           )}
 
           {/* Unified Login Link at the bottom of the card */}
-          <div className="pt-4 mt-2 pb-2 text-center border-t border-slate-100">
+          <div className="pt-4 mt-2 pb-2 text-center border-t border-[#F4F6F8]">
             <p className="text-xs text-slate-500">
               Already have an account?{' '}
               <button

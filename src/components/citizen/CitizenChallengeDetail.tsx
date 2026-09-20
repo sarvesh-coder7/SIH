@@ -94,9 +94,6 @@ export const CitizenChallengeDetail: React.FC = () => {
   const [endorsed, setEndorsed] = useState(false);
   const [following, setFollowing] = useState(false);
   const [activePhotoModal, setActivePhotoModal] = useState<MultimediaEvidence | null>(null);
-  const [newComment, setNewComment] = useState('');
-  const [comments, setComments] = useState<Array<{ id: string; sender: string; role: string; text: string; date: string }>>([]);
-
   useEffect(() => {
     const idToFetch = resolvedId;
     if (!idToFetch) {
@@ -973,110 +970,7 @@ export const CitizenChallengeDetail: React.FC = () => {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 8. PROBLEM COLLABORATION & MULTI-STAKEHOLDER COMMUNICATION */}
-      {/* ========================================================================= */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-amber-600" />
-            <h2 className="text-base sm:text-lg font-bold text-slate-900">
-              Problem Updates & Discussion
-            </h2>
-          </div>
-          <span className="text-xs text-slate-500 font-medium">
-            Citizen &bull; Government &bull; University &bull; Industry
-          </span>
-        </div>
 
-        {/* Stakeholder Badges */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 uppercase font-bold block">Reporting Citizen</span>
-            <span className="text-xs font-bold text-slate-900 truncate block">
-              {challenge.submittedBy?.userName || 'Citizen Reporter'}
-            </span>
-            <span className="text-[10px] text-emerald-700 font-medium">Verified Submitter</span>
-          </div>
-
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 uppercase font-bold block">Nodal Department</span>
-            <span className="text-xs font-bold text-slate-900 truncate block">
-              {challenge.category === 'Water Resources' ? 'Drinking Water & Sanitation' : 'Rural Development Dept'}
-            </span>
-            <span className="text-[10px] text-amber-700 font-medium">Supervising Authority</span>
-          </div>
-
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 uppercase font-bold block">Designated HEI</span>
-            <span className="text-xs font-bold text-slate-900 truncate block">
-              {challenge.assignedUniversityName || 'BIT Mesra / IIT ISM'}
-            </span>
-            <span className="text-[10px] text-purple-700 font-medium">R&D Solution Partner</span>
-          </div>
-
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <span className="text-[10px] text-slate-500 uppercase font-bold block">Industry Partner</span>
-            <span className="text-xs font-bold text-slate-900 truncate block">
-              Tata Steel Innovation CSR
-            </span>
-            <span className="text-[10px] text-blue-700 font-medium">Deployment & Pilot CSR</span>
-          </div>
-        </div>
-
-        {/* Message Thread */}
-        <div className="space-y-3 pt-2">
-          {comments.map((msg) => (
-            <div key={msg.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-900">{msg.sender}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-semibold">
-                    {msg.role}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-medium">{msg.date}</span>
-              </div>
-              <p className="text-xs text-slate-700 leading-relaxed">{msg.text}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Send Response Input */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newComment.trim()) return;
-            const newMsg = {
-              id: `c-${Date.now()}`,
-              sender: currentUser?.name || 'Citizen Reporter',
-              role: currentUser?.role === 'citizen' ? 'Citizen' : 'Partner',
-              text: newComment.trim(),
-              date: 'Just now',
-            };
-            setComments((prev) => [...prev, newMsg]);
-            setNewComment('');
-            showToast('success', 'Update Posted', 'Your response has been dispatched to the nodal task force.');
-          }}
-          className="flex items-center gap-2 pt-2 border-t border-slate-100"
-        >
-          <input
-            type="text"
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Type a message or response for authorities & university team..."
-            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-          />
-          <button
-            type="submit"
-            disabled={!newComment.trim()}
-            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Send</span>
-          </button>
-        </form>
-      </div>
 
       {/* Photo Preview Modal */}
       {activePhotoModal && (

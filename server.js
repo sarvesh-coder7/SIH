@@ -109,8 +109,8 @@ if (hasSmtp) {
       smtpVerified = true;
       console.log(`✓ SMTP connection verified (${smtpHost}:${smtpPort})`);
     }).catch((err) => {
-      console.warn(`⚠️ SMTP verification failed: ${err.message}`);
-      console.error('  ✗ OTP emails will not be delivered.');
+      console.error(`✗ SMTP verification failed`);
+      console.error(`Exact useful error:`, err);
     });
   } catch (e) {
     console.error('✗ SMTP transporter init failed:', e.message);
@@ -273,6 +273,44 @@ app.get('/api/health', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// TEST EMAIL ROUTE
+// ---------------------------------------------------------------------------
+app.get('/api/test-email', async (req, res) => {
+  if (!transporter) {
+    return res.status(503).json({ success: false, error: 'SMTP transporter not created. Check .env configuration.' });
+  }
+
+  const testEmail = req.query.email || senderEmail;
+  if (!testEmail) {
+    return res.status(400).json({ success: false, error: 'Provide ?email= query parameter' });
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: { name: senderName, address: fromAddress },
+      to: testEmail,
+      subject: 'JH Innovation Connect - SMTP Test',
+      text: 'This is a test email to verify SMTP configuration is working correctly.',
+      html: '<p>This is a test email to verify <strong>SMTP configuration</strong> is working correctly.</p>'
+    });
+    
+    if (info.rejected && info.rejected.length > 0) {
+      return res.status(500).json({ success: false, error: 'Email rejected by SMTP server', info });
+    }
+    
+    return res.json({ success: true, message: 'Test email sent successfully', info });
+  } catch (err) {
+    console.error('SMTP test failed:', err);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'SMTP test failed', 
+      details: err.message,
+      fullError: err
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // SEND OTP
 // ---------------------------------------------------------------------------
 app.post('/api/send-otp', otpLimiter, async (req, res) => {
@@ -287,9 +325,21 @@ app.post('/api/send-otp', otpLimiter, async (req, res) => {
     return res.status(503).json({ success: false, error: 'Email delivery is not configured on this server.' });
   }
 
+  if (supabase) {
+    try {
+      const { data: existingProfile } = await supabase.from('profiles').select('id').eq('email', cleanEmail).maybeSingle();
+      if (existingProfile) {
+        return res.status(400).json({ success: false, error: 'Email is already registered.' });
+      }
+    } catch (e) {
+      console.warn('Could not check existing profile:', e.message);
+    }
+  }
+
   try {
     // Generate secure 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
+    console.log(`[DEV TEST] Generated OTP for ${cleanEmail}: ${otp}`);
     const hashedOtp = crypto.createHash('sha256').update(otp).digest('hex');
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
@@ -344,7 +394,7 @@ app.post('/api/verify-otp', verifyLimiter, async (req, res) => {
 
   if (Date.now() > record.expiresAt) {
     otpStore.delete(cleanEmail);
-    return res.status(400).json({ success: false, error: 'OTP has expired. Please request a new code.' });
+    return res.status(400).json({ success: false, error: 'Verification code has expired.' });
   }
 
   record.attempts = (record.attempts || 0) + 1;
@@ -355,7 +405,7 @@ app.post('/api/verify-otp', verifyLimiter, async (req, res) => {
 
   const hashedInput = crypto.createHash('sha256').update(otp.toString().trim()).digest('hex');
   if (hashedInput !== record.otp) {
-    return res.status(400).json({ success: false, error: 'Invalid OTP. Please check the 6-digit code and try again.' });
+    return res.status(400).json({ success: false, error: 'Verification code is incorrect.' });
   }
 
   // OTP valid — consume it
@@ -384,11 +434,9 @@ app.post('/api/verify-otp', verifyLimiter, async (req, res) => {
     if (signUpError) {
       // Handle duplicate user
       if (signUpError.message?.includes('already registered') || signUpError.status === 422) {
-        return res.json({
-          success: true,
-          message: 'Account already exists. Please log in with your credentials.',
-          userId: null,
-          existingUser: true,
+        return res.status(400).json({
+          success: false,
+          error: 'Email is already registered.',
         });
       }
       console.error('Supabase signUp error:', signUpError.message);
