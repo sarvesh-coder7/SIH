@@ -8,6 +8,7 @@ import {
   useNavigate,
   useParams,
   Navigate,
+  useLocation,
 } from '@tanstack/react-router';
 
 import { ToastProvider } from '../context/ToastContext';
@@ -102,6 +103,11 @@ const RootComponent: React.FC = () => {
 
 // Standard Portal Layout Wrapper for general portal pages
 const PortalLayoutWrapper: React.FC = () => {
+  const location = useLocation();
+  const isUniversityPage =
+    location.pathname.startsWith('/universities') ||
+    location.pathname.startsWith('/dashboard/university');
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-900 font-sans antialiased selection:bg-emerald-500 selection:text-white">
       <Header />
@@ -109,7 +115,7 @@ const PortalLayoutWrapper: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <Outlet />
       </main>
-      <Footer />
+      {!isUniversityPage && <Footer />}
     </div>
   );
 };

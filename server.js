@@ -162,11 +162,10 @@ function buildOtpEmail(otp) {
               <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
                 <tr>
                   <td style="font-family:monospace;font-size:42px;font-weight:bold;letter-spacing:12px;color:#10253D;padding-right:20px;border-right:1px solid #E5E7EB;">${otp}</td>
-                  <td style="padding-left:20px; text-align:center;">
-                    <a href="javascript:void(0)" onclick="navigator.clipboard.writeText('${otp}').then(() => { var msg = document.getElementById('copy-msg'); if(msg) msg.innerText = 'Copied!'; }).catch(() => {}); return false;" style="display:inline-block;cursor:pointer;text-decoration:none;">
+                  <td style="padding-left:20px; vertical-align:middle; text-align:center; padding-top:6px;">
+                    <a href="mailto:?subject=My%20JH%20Innovation%20Connect%20OTP&body=Your%20OTP%20is:%20${otp}" title="Share / Copy OTP" style="display:inline-block;cursor:pointer;text-decoration:none;">
                       <img src="https://img.icons8.com/fluency-systems-regular/48/10253D/copy.png" alt="Copy Icon" width="24" height="24" style="display:block;border:0;outline:none;" />
                     </a>
-                    <div id="copy-msg" style="font-size:11px;color:#C79A32;margin-top:4px;font-weight:bold;min-height:16px;"></div>
                   </td>
                 </tr>
               </table>

@@ -345,7 +345,7 @@ const AppContent: React.FC = () => {
       <AuthModal />
 
       {/* Footer */}
-      <Footer />
+      {currentView !== 'universities' && !currentView.startsWith('university') && !currentView.startsWith('student') && <Footer />}
     </div>
   );
 };

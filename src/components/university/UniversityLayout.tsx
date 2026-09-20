@@ -3,7 +3,6 @@ import { useApp } from '../../context/AppContext';
 import { JharkhandEmblem } from '../common/JharkhandEmblem';
 
 import { EcosystemArchitectureModal } from '../common/EcosystemArchitectureModal';
-import { Footer } from '../common/Footer';
 import {
   LayoutDashboard,
   GraduationCap,
@@ -715,8 +714,6 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
           {children}
         </main>
       </div>
-
-      <Footer />
 
       {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
