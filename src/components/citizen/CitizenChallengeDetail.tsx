@@ -37,6 +37,7 @@ import {
   RefreshCw,
   Paperclip,
   Download,
+  Copy,
 } from 'lucide-react';
 import { MultimediaEvidence, Challenge } from '../../types';
 
@@ -45,6 +46,7 @@ export const CitizenChallengeDetail: React.FC = () => {
     currentUser,
     currentRole,
     selectedChallengeId,
+    setSelectedChallengeId,
     challenges,
     setCurrentView,
     goBack,
@@ -52,112 +54,223 @@ export const CitizenChallengeDetail: React.FC = () => {
     refreshData,
   } = useApp();
 
+  // Multi-source ID resolution:
+  // 1. URL route params: /tracking/:id, /track/:id, /challenge/:id
+  // 2. URL search params: ?trackingId=... or ?id=...
+  // 3. selectedChallengeId in AppContext
+  // 4. sessionStorage fallback
+  const getResolvedId = (): string => {
+    if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      const match = pathname.match(/\/(?:challenge|tracking|track|tracking-id)\/([^/?#]+)/i);
+      if (match && match[1] && match[1].trim()) {
+        return decodeURIComponent(match[1]).trim();
+      }
+      try {
+        const searchParams = new URLSearchParams(window.location.search);
+        const qId = searchParams.get('trackingId') || searchParams.get('id') || searchParams.get('challengeId');
+        if (qId && qId.trim()) return qId.trim();
+      } catch (_) {}
+
+      try {
+        const storedId = sessionStorage.getItem('lastSubmittedTrackingId') || sessionStorage.getItem('lastSubmittedChallengeDbId');
+        if (storedId && storedId.trim()) return storedId.trim();
+      } catch (_) {}
+    }
+
+    if (selectedChallengeId && selectedChallengeId.trim()) {
+      return selectedChallengeId.trim();
+    }
+    return '';
+  };
+
+  const resolvedId = getResolvedId();
   const [liveChallenge, setLiveChallenge] = useState<Challenge | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
   const [endorsed, setEndorsed] = useState(false);
   const [following, setFollowing] = useState(false);
   const [activePhotoModal, setActivePhotoModal] = useState<MultimediaEvidence | null>(null);
   const [newComment, setNewComment] = useState('');
-  // Comments come from real timeline/notifications — no hardcoded stubs
   const [comments, setComments] = useState<Array<{ id: string; sender: string; role: string; text: string; date: string }>>([]);
 
   useEffect(() => {
-    if (!selectedChallengeId) {
+    const idToFetch = resolvedId;
+    if (!idToFetch) {
       setIsLoading(false);
+      setNotFound(true);
       return;
     }
+
+    if (selectedChallengeId !== idToFetch) {
+      setSelectedChallengeId(idToFetch);
+    }
+
     let mounted = true;
     setIsLoading(true);
+    setFetchError(null);
+    setNotFound(false);
 
     const fetchChallenge = async (attempt = 1) => {
       try {
-        const data = await challengeService.getChallengeById(selectedChallengeId);
+        console.log(`[TrackingPage] Fetching report with ID: "${idToFetch}" (attempt ${attempt})`);
+        const data = await challengeService.getChallengeById(idToFetch);
         if (!mounted) return;
         if (data) {
+          console.log('[TrackingPage] Successfully retrieved report:', data);
           setLiveChallenge(data);
           setIsLoading(false);
+          setNotFound(false);
+          setFetchError(null);
         } else if (attempt < 3) {
-          // Retry — Supabase may still be propagating the insert
-          setTimeout(() => fetchChallenge(attempt + 1), 1500);
+          // Retry for replication delay
+          setTimeout(() => {
+            if (mounted) void fetchChallenge(attempt + 1);
+          }, 1200);
         } else {
           setIsLoading(false);
+          setNotFound(true);
         }
-      } catch (err) {
-        console.warn('Live challenge query failed:', err);
-        if (mounted) setIsLoading(false);
+      } catch (err: any) {
+        console.error('[TrackingPage] Supabase query error:', err);
+        if (mounted) {
+          setIsLoading(false);
+          setFetchError(err?.message || 'Unable to load tracking information.');
+        }
       }
     };
 
     void fetchChallenge();
-    return () => { mounted = false; };
-  }, [selectedChallengeId]);
+    return () => {
+      mounted = false;
+    };
+  }, [resolvedId]);
 
   const handleRefresh = async () => {
-    if (!selectedChallengeId) return;
+    const targetId = resolvedId || selectedChallengeId;
+    if (!targetId) return;
     setIsRefreshing(true);
+    setFetchError(null);
     try {
-      const data = await challengeService.getChallengeById(selectedChallengeId);
+      const data = await challengeService.getChallengeById(targetId);
       if (data) {
         setLiveChallenge(data);
+        setNotFound(false);
+        setFetchError(null);
         showToast('success', 'Status Refreshed', 'Loaded latest verified milestones from the portal.');
       } else {
+        setNotFound(true);
         showToast('error', 'Not Found', 'Could not retrieve this report. It may have been deleted.');
       }
       await refreshData();
-    } catch (err) {
+    } catch (err: any) {
+      setFetchError(err?.message || 'Unable to load tracking information.');
       showToast('error', 'Refresh Failed', 'Could not refresh latest updates.');
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  // Use live Supabase data; fall back to local cache only (never challenges[0])
+  // Match live Supabase record or cached collection item
   const challenge =
     liveChallenge ||
-    challenges.find((c) => c.id === selectedChallengeId || c.trackingId === selectedChallengeId) ||
+    challenges.find(
+      (c) =>
+        (resolvedId && c.id && c.id.toLowerCase() === resolvedId.toLowerCase()) ||
+        (resolvedId && c.trackingId && c.trackingId.toLowerCase() === resolvedId.toLowerCase())
+    ) ||
     null;
 
+  // 1. LOADING STATE
   if (isLoading && !challenge) {
     return (
-      <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 shadow-xs space-y-4">
-        <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <h2 className="text-base font-bold text-slate-800">Loading Your Complaint...</h2>
-        <p className="text-xs text-slate-500">Fetching your report from the Supabase database. Please wait a moment.</p>
-      </div>
-    );
-  }
-
-  if (!challenge) {
-    return (
-      <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-xs space-y-4">
-        <h2 className="text-lg font-bold text-slate-900">Report Not Found</h2>
-        <p className="text-xs text-slate-500 max-w-sm mx-auto">
-          This report could not be retrieved. It may still be saving — please try again in a moment, or go back to My Challenges.
-        </p>
-        <div className="flex items-center justify-center gap-3">
-          <button
-            onClick={handleRefresh}
-            className="px-5 py-2.5 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl cursor-pointer hover:bg-amber-400 transition-colors flex items-center gap-1.5"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Try Again
-          </button>
-          <button
-            onClick={() => setCurrentView('citizen-my-challenges')}
-            className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
-          >
-            My Challenges
-          </button>
+      <div className="max-w-4xl mx-auto py-12 px-4 font-sans-body">
+        <div className="bg-white rounded-3xl p-16 text-center border border-slate-200 shadow-xs space-y-4">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <h2 className="text-base font-bold text-slate-800">Loading Tracking Information...</h2>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Retrieving official complaint record from the Supabase database. Please wait a moment.
+          </p>
         </div>
       </div>
     );
   }
 
-  const statusInfo = getCitizenStatusLabel(challenge.status, challenge.isReopened);
+  // 2. ERROR STATE
+  if (fetchError && !challenge) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 px-4 font-sans-body">
+        <div className="bg-white rounded-3xl p-12 text-center border border-rose-200 shadow-xs space-y-4">
+          <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center mx-auto">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Unable to load tracking information.</h2>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            {fetchError || 'A network error occurred while communicating with the database. Please check your connection and retry.'}
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="px-5 py-2.5 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl cursor-pointer hover:bg-amber-400 transition-colors flex items-center gap-1.5 shadow-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Retry</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => goBack(currentRole === 'citizen' ? 'citizen-my-challenges' : 'explore-challenges')}
+              className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+            >
+              Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. NOT FOUND STATE
+  if (!challenge || notFound) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 px-4 font-sans-body">
+        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-xs space-y-4">
+          <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto">
+            <FileText className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Tracking ID not found.</h2>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            The tracking reference &ldquo;{resolvedId || 'unknown'}&rdquo; could not be located in the database. Please verify the ID and try again.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="px-5 py-2.5 bg-amber-500 text-slate-950 font-bold text-xs rounded-xl cursor-pointer hover:bg-amber-400 transition-colors flex items-center gap-1.5 shadow-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Try Again</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentView(currentRole === 'citizen' ? 'citizen-my-challenges' : 'explore-challenges')}
+              className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-xl cursor-pointer hover:bg-slate-50 transition-colors"
+            >
+              My Challenges
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const statusInfo = getCitizenStatusLabel(challenge.status || 'Submitted', Boolean(challenge.isReopened));
   const trustInfo = getCitizenTrustStatus(challenge);
   const isResolved = challenge.status === 'Implemented' || challenge.status === 'Impact Measured';
-  const isReopened = challenge.isReopened || challenge.status === 'Rejected';
+  const isReopened = Boolean(challenge.isReopened || challenge.status === 'Rejected');
 
   const handleEndorse = () => {
     if (!endorsed) {
@@ -196,10 +309,10 @@ export const CitizenChallengeDetail: React.FC = () => {
   
   const verificationEntry = challenge.timeline?.find(
     (t) =>
-      t.stage.toLowerCase().includes('verification') ||
-      t.stage.toLowerCase().includes('validated') ||
-      t.stage.toLowerCase().includes('approved as open') ||
-      t.stage.toLowerCase().includes('reviewed')
+      (t.stage || '').toLowerCase().includes('verification') ||
+      (t.stage || '').toLowerCase().includes('validated') ||
+      (t.stage || '').toLowerCase().includes('approved as open') ||
+      (t.stage || '').toLowerCase().includes('reviewed')
   );
   const verificationDate = verificationEntry
     ? formatFullDateTime(verificationEntry.date) || verificationEntry.date
@@ -209,9 +322,9 @@ export const CitizenChallengeDetail: React.FC = () => {
 
   const publishedEntry = challenge.timeline?.find(
     (t) =>
-      t.stage.toLowerCase().includes('open problem') ||
-      t.stage.toLowerCase().includes('published') ||
-      t.stage.toLowerCase().includes('matching')
+      (t.stage || '').toLowerCase().includes('open problem') ||
+      (t.stage || '').toLowerCase().includes('published') ||
+      (t.stage || '').toLowerCase().includes('matching')
   );
   const publishedDate = publishedEntry
     ? formatFullDateTime(publishedEntry.date) || publishedEntry.date
@@ -221,9 +334,9 @@ export const CitizenChallengeDetail: React.FC = () => {
 
   const interestEntry = challenge.timeline?.find(
     (t) =>
-      t.stage.toLowerCase().includes('interest') ||
-      t.stage.toLowerCase().includes('industry solution') ||
-      t.stage.toLowerCase().includes('assignment')
+      (t.stage || '').toLowerCase().includes('interest') ||
+      (t.stage || '').toLowerCase().includes('industry solution') ||
+      (t.stage || '').toLowerCase().includes('assignment')
   );
   const interestDate = interestEntry
     ? formatFullDateTime(interestEntry.date) || interestEntry.date
@@ -233,7 +346,7 @@ export const CitizenChallengeDetail: React.FC = () => {
     ? 'Expressions / Solutions Received'
     : 'Open for Institutions & Industry';
 
-  const assignmentEntry = challenge.timeline?.find((t) => t.stage.toLowerCase().includes('assign'));
+  const assignmentEntry = challenge.timeline?.find((t) => (t.stage || '').toLowerCase().includes('assign'));
   const assignmentDate = challenge.officialAssignment?.assignedDate
     ? formatFullDateTime(challenge.officialAssignment.assignedDate) || challenge.officialAssignment.assignedDate
     : assignmentEntry
@@ -388,9 +501,43 @@ export const CitizenChallengeDetail: React.FC = () => {
       </div>
 
       {/* ========================================================================= */}
-      {/* 1. HEADER & BASIC DETAILS (SECTION 19) */}
+      {/* 1. HEADER & BASIC DETAILS (SECTION 19) - SUCCESS STATE */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs space-y-5">
+        {/* Success Notification Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-emerald-50/90 rounded-2xl border border-emerald-200 text-emerald-950">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-sm sm:text-base font-black text-emerald-950 block">
+                ✓ Report Submitted Successfully
+              </span>
+              <span className="text-xs text-emerald-800 font-medium">
+                Tracking ID: <strong className="font-mono">{challenge.trackingId || challenge.id}</strong>
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const tid = challenge.trackingId || challenge.id;
+              if (navigator.clipboard && tid) {
+                navigator.clipboard.writeText(tid);
+                setCopiedId(true);
+                showToast('info', 'Copied!', 'Tracking ID copied to clipboard.');
+                setTimeout(() => setCopiedId(false), 2500);
+              }
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-emerald-100/70 text-emerald-900 border border-emerald-300 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 self-start sm:self-auto shrink-0 shadow-2xs"
+            title="Copy Tracking ID"
+          >
+            {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copiedId ? 'Copied' : 'Copy Tracking ID'}</span>
+          </button>
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -435,7 +582,7 @@ export const CitizenChallengeDetail: React.FC = () => {
               {statusInfo.label}
             </span>
             <span className="text-xs font-bold bg-amber-100 text-amber-900 px-3 py-1 rounded-full border border-amber-300/60">
-              {challenge.category}
+              {challenge.category || 'General'}
             </span>
           </div>
         </div>
@@ -443,10 +590,10 @@ export const CitizenChallengeDetail: React.FC = () => {
         {/* Title & Description */}
         <div className="space-y-2">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            {challenge.title}
+            {challenge.title || 'Untitled Problem Report'}
           </h1>
           <p className="text-sm text-slate-700 leading-relaxed">
-            {challenge.description}
+            {challenge.description || 'No description provided.'}
           </p>
         </div>
 
@@ -482,7 +629,7 @@ export const CitizenChallengeDetail: React.FC = () => {
             <div>
               <span className="text-[10px] text-slate-500 uppercase font-bold block">Location</span>
               <span className="text-xs font-bold text-slate-900">
-                {challenge.village ? `${challenge.village}, ` : ''}{challenge.district}
+                {[challenge.village, challenge.block, challenge.district].filter(Boolean).join(', ') || 'Jharkhand'}
               </span>
             </div>
           </div>
@@ -490,9 +637,9 @@ export const CitizenChallengeDetail: React.FC = () => {
           <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center gap-2.5">
             <Clock className="w-4 h-4 text-amber-600 shrink-0" />
             <div>
-              <span className="text-[10px] text-slate-500 uppercase font-bold block">Reported Date & Time</span>
+              <span className="text-[10px] text-slate-500 uppercase font-bold block">Submitted Date & Time</span>
               <span className="text-xs font-bold text-slate-900">
-                {formatFullDateTime(challenge.submittedAt) || 'Just now'}
+                {formatFullDateTime(challenge.submittedAt) || 'Registered'}
               </span>
             </div>
           </div>
@@ -735,8 +882,8 @@ export const CitizenChallengeDetail: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {challenge.evidence
-              .filter((ev) => ev.url && !ev.url.startsWith('blob:'))
+            {(challenge.evidence || [])
+              .filter((ev) => ev && typeof ev.url === 'string' && ev.url.trim() && !ev.url.startsWith('blob:'))
               .map((ev) => (
               <div
                 key={ev.id}

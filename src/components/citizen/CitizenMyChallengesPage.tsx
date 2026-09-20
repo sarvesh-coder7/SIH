@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
+import { supabase } from '../../lib/supabase';
+import { challengeService, isValidUUID } from '../../services/challengeService';
 import { JHARKHAND_DISTRICTS } from '../../mock/data';
 import { getCitizenStatusLabel, getCitizenTrustStatus } from './CitizenDashboard';
 import {
@@ -32,11 +34,79 @@ export const CitizenMyChallengesPage: React.FC = () => {
   const [selectedDistrict, setSelectedDistrict] = useState<string>('All');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [liveChallenges, setLiveChallenges] = useState<any[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchLiveChallenges = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      console.log("AUTH USER:", user);
+      console.log("AUTH USER ID:", user?.id);
+
+      // Determine the real Supabase Auth user UUID
+      let targetAuthUuid: string | null = null;
+      if (user?.id && isValidUUID(user.id)) {
+        targetAuthUuid = user.id;
+      } else if (currentUser?.id && isValidUUID(currentUser.id)) {
+        targetAuthUuid = currentUser.id;
+      } else if (currentUser?.email && !['guest', 'user-cit-01'].includes(currentUser.id)) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', currentUser.email)
+          .maybeSingle();
+        if (profile?.id && isValidUUID(profile.id)) {
+          targetAuthUuid = profile.id;
+        }
+      }
+
+      console.log("Active Supabase Auth UUID for submissions query:", targetAuthUuid);
+      console.log("Citizen Application ID:", currentUser?.id);
+
+      if (!targetAuthUuid) {
+        // No valid Supabase Auth UUID available.
+        // Do NOT send non-UUID strings (like 'user-cit-01') to PostgreSQL UUID column.
+        const fallback = challenges.filter((c: any) => c.submittedBy?.userId === currentUser?.id);
+        setLiveChallenges(fallback);
+        setFetchError(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('challenges')
+        .select('*, profiles:submitted_by(id, name, email, phone, role)')
+        .eq('submitted_by', targetAuthUuid)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Failed to fetch citizen submissions:", error);
+        setFetchError(error.message);
+      } else {
+        console.log("Citizen submissions:", data);
+        const hydrated = await Promise.all((data || []).map((row: any) => challengeService.hydrate(row)));
+        setLiveChallenges(hydrated);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch citizen submissions:", err);
+      setFetchError(err?.message || 'Error fetching citizen submissions.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser, challenges]);
+
+  useEffect(() => {
+    void fetchLiveChallenges();
+  }, [fetchLiveChallenges]);
 
   // Only show challenges submitted by the current user
-  const myOwnChallenges = challenges.filter(
-    (ch) => ch.submittedBy?.userId === currentUser.id
-  );
+  const myOwnChallenges = liveChallenges !== null
+    ? liveChallenges
+    : challenges.filter((ch) => ch.submittedBy?.userId === currentUser.id);
 
   // Filter list
   const filteredChallenges = myOwnChallenges.filter((ch) => {
@@ -90,6 +160,7 @@ export const CitizenMyChallengesPage: React.FC = () => {
     setIsDeleting(false);
     setConfirmDeleteId(null);
     if (success) {
+      setLiveChallenges((prev) => (prev ? prev.filter((c) => c.id !== id && c.trackingId !== id) : []));
       showToast('success', 'Complaint Deleted', 'Your complaint and all attached media have been permanently removed.');
     } else {
       showToast('error', 'Delete Failed', 'Could not delete this complaint. Please try again.');
@@ -201,8 +272,31 @@ export const CitizenMyChallengesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Challenges List (Cards format) */}
-      {filteredChallenges.length === 0 ? (
+      {/* Error display */}
+      {fetchError && (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-rose-800 text-xs">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>Failed to load submissions: {fetchError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void fetchLiveChallenges()}
+            className="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg font-bold flex items-center gap-1 cursor-pointer"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Retry</span>
+          </button>
+        </div>
+      )}
+
+      {/* Loading state or Challenges List */}
+      {isLoading && liveChallenges === null ? (
+        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs space-y-3">
+          <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin mx-auto" />
+          <p className="text-xs text-slate-500 font-medium">Loading your registered complaints...</p>
+        </div>
+      ) : filteredChallenges.length === 0 ? (
         <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-2xs space-y-3">
           <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 mx-auto flex items-center justify-center">
             <FileText className="w-6 h-6" />

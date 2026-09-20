@@ -39,6 +39,11 @@ export interface CreateChallengeInput {
   }[];
 }
 
+export const isValidUUID = (val?: string | null): boolean => {
+  if (!val || typeof val !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+};
+
 const emptyAI = (category: ChallengeCategory, subCategory = ''): AIAnalysis => ({
   category, subCategory, priority: 'Medium', priorityScore: 0, reasoning: '',
   similarChallengesCount: 0, similarChallengeIds: [], recommendedDisciplines: [],
@@ -46,7 +51,7 @@ const emptyAI = (category: ChallengeCategory, subCategory = ''): AIAnalysis => (
 });
 
 class ChallengeService {
-  private async hydrate(row: any): Promise<Challenge> {
+  public async hydrate(row: any): Promise<Challenge> {
     const [mediaRes, tagsRes, timelineRes, aiRes] = await Promise.all([
       supabase.from('challenge_media').select('*').eq('challenge_id', row.id).order('created_at', { ascending: true }),
       supabase.from('challenge_tags').select('*').eq('challenge_id', row.id).order('id', { ascending: true }),
@@ -70,6 +75,8 @@ class ChallengeService {
       confidenceScore: ai.confidence_score || 0,
     } : emptyAI(row.category, row.sub_category);
 
+    const profileData = row.profiles || {};
+
     return {
       id: row.id,
       trackingId: row.tracking_id || row.id,
@@ -83,8 +90,11 @@ class ChallengeService {
       village: row.village || '',
       gpsCoordinates: { lat: Number(row.latitude), lng: Number(row.longitude) },
       submittedBy: {
-        userId: row.submitted_by || '', userName: row.submitter_name || 'Citizen',
-        userRole: row.submitter_role || 'citizen', contactNumber: row.submitter_phone || '', organization: row.submitter_organization,
+        userId: row.submitted_by || '',
+        userName: profileData.name || row.submitter_name || 'Citizen',
+        userRole: profileData.role || row.submitter_role || 'citizen',
+        contactNumber: profileData.phone || row.submitter_phone || '',
+        organization: profileData.organization || row.submitter_organization,
       },
       affectedPopulation: Number(row.affected_population || 0),
       frequency: row.frequency || 'Daily',
@@ -108,7 +118,10 @@ class ChallengeService {
       endorsementsCount: Number(row.endorsements_count || 0),
       viewsCount: Number(row.views_count || 0),
       timeline: (timelineRes.data || []).map((t: any) => ({
-        stage: t.stage, date: t.date || t.created_at, description: t.description || '', actor: t.actor_name || 'Platform',
+        stage: t.stage || 'Update',
+        date: t.date || t.created_at,
+        description: t.description || '',
+        actor: t.actor_name || 'Platform',
       })),
       trustStatus: row.trust_status || undefined,
       latestUpdate: row.latest_update || undefined,
@@ -119,7 +132,7 @@ class ChallengeService {
   }
 
   async getChallenges(filters?: { district?: string; category?: ChallengeCategory | 'All'; urgency?: ChallengeUrgency | 'All'; status?: ChallengeStatus | 'All'; search?: string; }): Promise<Challenge[]> {
-    let query = supabase.from('challenges').select('*').order('submitted_at', { ascending: false });
+    let query = supabase.from('challenges').select('*, profiles:submitted_by(id, name, email, phone, role)').order('submitted_at', { ascending: false });
     if (filters?.district && filters.district !== 'All') query = query.eq('district', filters.district);
     if (filters?.category && filters.category !== 'All') query = query.eq('category', filters.category);
     if (filters?.urgency && filters.urgency !== 'All') query = query.eq('urgency', filters.urgency);
@@ -134,26 +147,51 @@ class ChallengeService {
   }
 
   async getChallengeById(id: string): Promise<Challenge | undefined> {
-    if (!id) return undefined;
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    let query = supabase.from('challenges').select('*');
+    if (!id || typeof id !== 'string') return undefined;
+    const cleanId = id.trim();
+    if (!cleanId) return undefined;
+
+    const isUUID = isValidUUID(cleanId);
+    let query = supabase.from('challenges').select('*, profiles:submitted_by(id, name, email, phone, role)');
     if (isUUID) {
-      query = query.or(`id.eq.${id},tracking_id.eq.${id}`);
+      query = query.or(`id.eq.${cleanId},tracking_id.ilike.${cleanId}`);
     } else {
-      query = query.eq('tracking_id', id);
+      query = query.ilike('tracking_id', cleanId);
     }
     const { data, error } = await query.maybeSingle();
-    if (error || !data) return undefined;
+    if (error) {
+      console.warn('[challengeService] Primary query with profile relation failed, trying plain select:', error.message);
+      let fallbackQuery = supabase.from('challenges').select('*');
+      if (isUUID) {
+        fallbackQuery = fallbackQuery.or(`id.eq.${cleanId},tracking_id.ilike.${cleanId}`);
+      } else {
+        fallbackQuery = fallbackQuery.ilike('tracking_id', cleanId);
+      }
+      const res = await fallbackQuery.maybeSingle();
+      if (res.data) {
+        return this.hydrate(res.data);
+      }
+      return undefined;
+    }
+    if (!data) return undefined;
     return this.hydrate(data);
   }
 
   async getChallengesByUser(userId: string): Promise<Challenge[]> {
+    if (!userId || !isValidUUID(userId)) {
+      console.warn('[challengeService] getChallengesByUser skipped for non-UUID user identifier:', userId);
+      return [];
+    }
     const { data, error } = await supabase
       .from('challenges')
-      .select('*')
+      .select('*, profiles:submitted_by(id, name, email, phone, role)')
       .eq('submitted_by', userId)
-      .order('submitted_at', { ascending: false });
-    if (error) throw new Error(error.message);
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Failed to fetch citizen submissions:', error);
+      throw new Error(error.message);
+    }
+    console.log('Citizen submissions:', data);
     return Promise.all((data || []).map((row) => this.hydrate(row)));
   }
 
@@ -328,34 +366,50 @@ class ChallengeService {
       : 85.3096;
     const trackingId = `JH-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`;
 
+    const insertPayload = {
+      title: input.title,
+      description: input.description,
+      problem_summary: input.description,
+      category: input.category,
+      sub_category: input.subCategory || aiAnalysis.subCategory,
+      district: input.district || 'Ranchi',
+      block: input.block || '',
+      village: input.village || '',
+      latitude: latVal,
+      longitude: lngVal,
+      submitted_by: validSubmittedBy,
+      affected_population: Math.max(1, Number(input.affectedPopulation) || 1),
+      frequency: input.frequency || 'Daily',
+      urgency: input.urgency || 'High',
+      expected_impact: input.expectedImpact,
+      additional_information: input.additionalInformation,
+      status: 'Submitted',
+      current_stage: 'Challenge Submitted',
+      trust_status: 'Evidence Submitted',
+      views_count: 1,
+      endorsements_count: 1,
+      tracking_id: trackingId,
+    };
+
+    console.log("REPORT INSERT PAYLOAD:", insertPayload);
+    console.log("AUTH USER UUID:", currentAuthId);
+    console.log("CITIZEN ID:", input.submittedBy?.userId);
+
     const { data: row, error } = await supabase
       .from('challenges')
-      .insert({
-        title: input.title,
-        description: input.description,
-        problem_summary: input.description,
-        category: input.category,
-        sub_category: input.subCategory || aiAnalysis.subCategory,
-        district: input.district || 'Ranchi',
-        block: input.block || '',
-        village: input.village || '',
-        latitude: latVal,
-        longitude: lngVal,
-        submitted_by: validSubmittedBy,
-        affected_population: Math.max(1, Number(input.affectedPopulation) || 1),
-        frequency: input.frequency || 'Daily',
-        urgency: input.urgency || 'High',
-        expected_impact: input.expectedImpact,
-        additional_information: input.additionalInformation,
-        status: 'Submitted',
-        current_stage: 'Challenge Submitted',
-        trust_status: 'Evidence Submitted',
-        views_count: 1,
-        endorsements_count: 1,
-        tracking_id: trackingId,
-      })
+      .insert(insertPayload)
       .select('*')
       .single();
+
+    console.log('Submitted payload:', insertPayload);
+    console.log('Supabase table:', 'challenges');
+    console.log('Returned inserted row:', row);
+    console.log("REPORT SUBMITTED:", row);
+    console.log("TRACKING ID:", row?.tracking_id || trackingId);
+    if (error) {
+      console.error('Supabase error:', error);
+    }
+
     if (error || !row) {
       console.error('Failed to insert challenge into Supabase:', error);
       throw new Error(error?.message || 'Unable to save challenge to Supabase.');

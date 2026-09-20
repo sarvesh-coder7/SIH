@@ -22,7 +22,6 @@ import {
   AlertCircle,
   HelpCircle,
   X,
-  HelpCircle,
 } from 'lucide-react';
 
 interface RoleCardData {

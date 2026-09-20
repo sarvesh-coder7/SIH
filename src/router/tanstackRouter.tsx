@@ -181,6 +181,18 @@ const challengeDetailRoute = createRoute({
   component: ChallengeDetailWrapper,
 });
 
+const trackingDetailRoute = createRoute({
+  getParentRoute: () => portalLayoutRoute,
+  path: '/tracking/$challengeId',
+  component: ChallengeDetailWrapper,
+});
+
+const trackDetailRoute = createRoute({
+  getParentRoute: () => portalLayoutRoute,
+  path: '/track/$challengeId',
+  component: ChallengeDetailWrapper,
+});
+
 const challengeDetailFallbackRoute = createRoute({
   getParentRoute: () => portalLayoutRoute,
   path: '/challenge-detail',
@@ -380,6 +392,8 @@ const routeTree = rootRoute.addChildren([
   portalLayoutRoute.addChildren([
     exploreRoute,
     challengeDetailRoute,
+    trackingDetailRoute,
+    trackDetailRoute,
     challengeDetailFallbackRoute,
     universitiesRoute,
     industryRoute,

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
+import { supabase } from '../../lib/supabase';
 import { JHARKHAND_DISTRICTS } from '../../mock/data';
 import { challengeService } from '../../services/challengeService';
 import confetti from 'canvas-confetti';
@@ -101,9 +102,19 @@ export const SubmitChallengeForm: React.FC = () => {
     currentUser,
     showToast,
     refreshData,
+    addChallenge,
     navigateToChallenge,
     setCurrentView,
   } = useApp();
+
+  useEffect(() => {
+    void (async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user || (currentUser?.id && currentUser.id !== 'guest' ? currentUser : null);
+      console.log("Authenticated user:", user);
+      console.log("Authenticated user ID:", user?.id);
+    })();
+  }, [currentUser]);
 
   // Wizard Step: 1 = Describe, 2 = Location, 3 = Evidence, 4 = Review, 5 = Success
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -739,6 +750,10 @@ export const SubmitChallengeForm: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      const { data: authData } = await supabase.auth.getUser();
+      const activeUserId = authData?.user?.id || (currentUser?.id && currentUser.id !== 'guest' ? currentUser.id : null);
+      console.log("Submitting with authenticated user ID:", activeUserId);
+
       const newChallenge = await challengeService.createChallenge({
         title: problemTitle.trim(),
         description: whatIsHappening.trim(),
@@ -754,7 +769,7 @@ export const SubmitChallengeForm: React.FC = () => {
         urgency: urgency || 'High',
         expectedImpact: expectedImpact || 'Restoring functional community infrastructure and public well-being.',
         submittedBy: {
-          userId: currentUser?.id || 'citizen-reporter',
+          userId: activeUserId || currentUser?.id || 'citizen-reporter',
           userName: currentUser?.name || 'Citizen Submitter',
           userRole: currentUser?.role || 'Citizen',
           contactNumber: currentUser?.phone || '',
@@ -801,9 +816,36 @@ export const SubmitChallengeForm: React.FC = () => {
       setSubmittedChallengeId(finalTrackingId);
       setSubmittedChallengeDbId(newChallenge?.id || finalTrackingId);
       setIsSubmitting(false);
+
+      console.log("REPORT SUBMITTED:", newChallenge);
+      console.log("TRACKING ID:", finalTrackingId);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('lastSubmittedTrackingId', finalTrackingId);
+          if (newChallenge?.id) sessionStorage.setItem('lastSubmittedChallengeDbId', newChallenge.id);
+        } catch (_) {}
+      }
+
+      // Immediately register in client app state and refresh from database
+      if (newChallenge) {
+        addChallenge(newChallenge);
+      }
+      await refreshData().catch((rErr) => console.warn('Background refresh skipped:', rErr));
+
+      // Reset form fields
+      setProblemTitle('');
+      setWhatIsHappening('');
+      setPhotos([]);
+      setOtherFiles([]);
+      setDistrict('');
+      setBlock('');
+      setVillage('');
+      setGps(null);
+      setLocationMethod(null);
+      setAffectedPeopleCount('');
+
       setStep(5); // Show Success Screen
       showToast('success', 'Problem Report Submitted Successfully! ✓', `Tracking ID: ${finalTrackingId}`);
-      void refreshData().catch((rErr) => console.warn('Background refresh skipped:', rErr));
     } catch (err: any) {
       console.error('Submission failed with error:', err);
       setIsSubmitting(false);
@@ -902,7 +944,7 @@ export const SubmitChallengeForm: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button
             type="button"
-            onClick={() => navigateToChallenge(submittedChallengeDbId || activeTrackingId)}
+            onClick={() => navigateToChallenge(submittedChallengeId || activeTrackingId || submittedChallengeDbId || '')}
             className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-sm rounded-2xl shadow-lg cursor-pointer flex items-center justify-center gap-2 transition-all hover:scale-[1.02] ring-2 ring-amber-400/30"
           >
             <Eye className="w-4 h-4" />

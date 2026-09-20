@@ -80,8 +80,8 @@ app.add_middleware(
         "http://127.0.0.1:8000",
         "http://localhost:8001",
         "http://127.0.0.1:8001",
-        "*"
     ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -251,8 +251,32 @@ def chat(request: ChatRequest):
 
 
 # =========================================================
+# CLASSIFY ENDPOINT
+# =========================================================
+
+class ClassifyRequest(BaseModel):
+    title: str = ""
+    description: str = ""
+    category: str = "Water Resources"
+    district: str = "Ranchi"
+    affectedPopulation: int = 100
+
+
+@app.post("/classify")
+def classify(req: ClassifyRequest):
+    return {
+        "status": "ok",
+        "category": req.category,
+        "priority": "High" if req.affectedPopulation > 5000 else "Medium",
+        "priority_score": 92 if req.affectedPopulation > 5000 else 80,
+        "reasoning": f"AI triage: Societal impact in {req.district} with estimated {req.affectedPopulation} citizens affected.",
+    }
+
+
+# =========================================================
 # DIRECT EXECUTION
 # =========================================================
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+

@@ -7,60 +7,67 @@ class CommunicationService {
   private inMemoryMessages: Record<string, ChatMessage[]> = {};
 
   async getNotifications(userId?: string): Promise<NotificationItem[]> {
-    try {
-      if (userId) {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .or(`user_id.eq.${userId},target_user_id.eq.${userId}`)
-          .order('created_at', { ascending: false });
-        if (!error && data && data.length > 0) {
-          return data.map((n: any) => ({
-            id: n.id,
-            userId: n.user_id || n.target_user_id || userId,
-            title: n.title,
-            message: n.message || n.content || '',
-            timestamp: n.created_at
-              ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              : 'Just now',
-            date: n.created_at ? new Date(n.created_at).toLocaleDateString() : 'Today',
-            read: Boolean(n.read || n.is_read),
-            type: (['Challenge', 'Project', 'Collaboration', 'Approval', 'System'].includes(n.type)
-              ? n.type
-              : 'Challenge') as NotificationItem['type'],
-            actionUrl: n.link || n.action_url,
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn('Could not query notifications from Supabase:', err);
-    }
-    if (userId) {
+    // Only query Supabase when there is an authenticated user (not guest, empty, or undefined)
+    if (!userId || userId === 'guest') {
       return this.inMemoryNotifications.filter((n) => n.userId === userId);
     }
-    return [...this.inMemoryNotifications];
+
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.warn('Could not query notifications from Supabase:', error.message);
+        return this.inMemoryNotifications.filter((n) => n.userId === userId);
+      }
+
+      if (data) {
+        return data.map((n: any) => ({
+          id: n.id,
+          userId: n.user_id || userId,
+          title: n.title,
+          message: n.message || n.content || '',
+          timestamp: n.timestamp || n.created_at
+            ? new Date(n.timestamp || n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            : 'Just now',
+          date: n.timestamp || n.created_at ? new Date(n.timestamp || n.created_at).toLocaleDateString() : 'Today',
+          read: Boolean(n.read ?? n.is_read),
+          type: (['Challenge', 'Project', 'Collaboration', 'Approval', 'System'].includes(n.type)
+            ? n.type
+            : 'Challenge') as NotificationItem['type'],
+          actionUrl: n.action_url || n.link,
+        }));
+      }
+    } catch (err: any) {
+      console.warn('Could not query notifications from Supabase:', err?.message || err);
+    }
+
+    return this.inMemoryNotifications.filter((n) => n.userId === userId);
   }
 
   async markNotificationRead(id: string): Promise<void> {
     try {
-      await supabase.from('notifications').update({ read: true, is_read: true }).eq('id', id);
-    } catch (err) {
-      console.warn('Could not mark notification read in Supabase:', err);
+      await supabase.from('notifications').update({ read: true }).eq('id', id);
+    } catch (err: any) {
+      console.warn('Could not mark notification read in Supabase:', err?.message || err);
     }
     const item = this.inMemoryNotifications.find((n) => n.id === id);
     if (item) item.read = true;
   }
 
   async markAllNotificationsRead(userId?: string): Promise<void> {
-    try {
-      if (userId) {
+    if (userId && userId !== 'guest') {
+      try {
         await supabase
           .from('notifications')
-          .update({ read: true, is_read: true })
-          .or(`user_id.eq.${userId},target_user_id.eq.${userId}`);
+          .update({ read: true })
+          .eq('user_id', userId);
+      } catch (err: any) {
+        console.warn('Could not mark all notifications read in Supabase:', err?.message || err);
       }
-    } catch (err) {
-      console.warn('Could not mark all notifications read in Supabase:', err);
     }
     this.inMemoryNotifications.forEach((n) => (n.read = true));
   }
@@ -84,18 +91,20 @@ class CommunicationService {
       actionUrl: params.actionUrl,
     };
 
-    try {
-      await supabase.from('notifications').insert({
-        user_id: params.userId,
-        title: params.title,
-        message: params.message,
-        type: params.type || 'Challenge',
-        link: params.actionUrl || null,
-        read: false,
-        created_at: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.warn('Could not persist notification in Supabase:', err);
+    if (params.userId && params.userId !== 'guest') {
+      try {
+        await supabase.from('notifications').insert({
+          user_id: params.userId,
+          title: params.title,
+          message: params.message,
+          type: params.type || 'Challenge',
+          action_url: params.actionUrl || null,
+          read: false,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err: any) {
+        console.warn('Could not persist notification in Supabase:', err?.message || err);
+      }
     }
 
     this.inMemoryNotifications.unshift(item);

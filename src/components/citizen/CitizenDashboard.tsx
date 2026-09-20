@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
+import { supabase } from '../../lib/supabase';
+import { challengeService, isValidUUID } from '../../services/challengeService';
 import {
   PlusCircle,
   Compass,
@@ -21,6 +23,7 @@ import {
   Droplet,
   Sprout,
   Image as ImageIcon,
+  RotateCcw,
 } from 'lucide-react';
 import { Challenge } from '../../types';
 
@@ -106,11 +109,79 @@ export const CitizenDashboard: React.FC = () => {
   } = useApp();
 
   const [trackingInput, setTrackingInput] = useState('');
+  const [citizenReports, setCitizenReports] = useState<Challenge[] | null>(null);
+  const [isLoadingReports, setIsLoadingReports] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Citizen's reports — only challenges submitted by this user
-  const myReports = challenges.filter(
-    (c) => c.submittedBy?.userId === currentUser.id
-  );
+  const loadCitizenSubmissions = useCallback(async () => {
+    setIsLoadingReports(true);
+    setFetchError(null);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+      console.log("AUTH USER:", user);
+      console.log("AUTH USER ID:", user?.id);
+
+      // Determine the real Supabase Auth user UUID
+      let targetAuthUuid: string | null = null;
+      if (user?.id && isValidUUID(user.id)) {
+        targetAuthUuid = user.id;
+      } else if (currentUser?.id && isValidUUID(currentUser.id)) {
+        targetAuthUuid = currentUser.id;
+      } else if (currentUser?.email && !['guest', 'user-cit-01'].includes(currentUser.id)) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', currentUser.email)
+          .maybeSingle();
+        if (profile?.id && isValidUUID(profile.id)) {
+          targetAuthUuid = profile.id;
+        }
+      }
+
+      console.log("Active Supabase Auth UUID for submissions query:", targetAuthUuid);
+      console.log("Citizen Application ID:", currentUser?.id);
+
+      if (!targetAuthUuid) {
+        // No valid Supabase Auth UUID available.
+        // Do NOT send non-UUID strings (like 'user-cit-01') to PostgreSQL UUID column.
+        const fallback = challenges.filter((c) => c.submittedBy?.userId === currentUser?.id);
+        setCitizenReports(fallback);
+        setFetchError(null);
+        setIsLoadingReports(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('challenges')
+        .select('*, profiles:submitted_by(id, name, email, phone, role)')
+        .eq('submitted_by', targetAuthUuid)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Failed to fetch citizen submissions:", error);
+        setFetchError(error.message);
+      } else {
+        console.log("Citizen submissions:", data);
+        const hydrated = await Promise.all((data || []).map((row) => challengeService.hydrate(row)));
+        setCitizenReports(hydrated);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch citizen submissions:", err);
+      setFetchError(err?.message || 'Failed to load citizen submissions.');
+    } finally {
+      setIsLoadingReports(false);
+    }
+  }, [currentUser, challenges]);
+
+  useEffect(() => {
+    void loadCitizenSubmissions();
+  }, [loadCitizenSubmissions]);
+
+  // Citizen's reports — live Supabase query takes precedence over in-memory cache
+  const myReports = citizenReports !== null
+    ? citizenReports
+    : challenges.filter((c) => c.submittedBy?.userId === currentUser.id);
 
   // 4 Simple Summary KPI Cards (Section 5)
   const stats = {
@@ -321,7 +392,29 @@ export const CitizenDashboard: React.FC = () => {
           </button>
         </div>
 
-        {recentReports.length === 0 ? (
+        {fetchError && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-rose-800 text-xs">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Failed to load your submissions: {fetchError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadCitizenSubmissions()}
+              className="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded-lg font-bold flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Retry</span>
+            </button>
+          </div>
+        )}
+
+        {isLoadingReports && citizenReports === null ? (
+          <div className="bg-white rounded-2xl p-10 text-center border border-slate-200/90 shadow-2xs space-y-3">
+            <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin mx-auto" />
+            <p className="text-xs text-slate-500 font-medium">Checking your submitted complaints...</p>
+          </div>
+        ) : recentReports.length === 0 ? (
           <div className="bg-white rounded-2xl p-10 text-center border border-slate-200/90 shadow-2xs space-y-3">
             <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 mx-auto flex items-center justify-center">
               <FileText className="w-6 h-6" />

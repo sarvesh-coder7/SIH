@@ -31,7 +31,7 @@ import {
   MOCK_ACTIVITY_LOGS,
   MOCK_MODERATION_RECORDS,
 } from '../mock/governmentData';
-import { challengeService } from '../services/challengeService';
+import { challengeService, isValidUUID } from '../services/challengeService';
 import { projectService } from '../services/projectService';
 import { communicationService } from '../services/communicationService';
 import { authService } from '../services/authService';
@@ -349,6 +349,7 @@ interface AppContextType {
     reason: string;
   }) => void;
   deleteChallenge: (id: string) => Promise<boolean>;
+  addChallenge: (challenge: Challenge) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -546,34 +547,58 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
 
+  const addChallenge = (newChallenge: Challenge) => {
+    setChallenges((prev) => [
+      newChallenge,
+      ...prev.filter((c) => c.id !== newChallenge.id && c.trackingId !== newChallenge.trackingId),
+    ]);
+  };
+
   const refreshData = async () => {
-    const chList = await challengeService.getChallenges();
-    const prList = await projectService.getProjects();
-    const noList = await communicationService.getNotifications(currentUser.id);
-    setChallenges((prev) => {
-      if (prev.length === 0) return chList;
-      return chList.map((incoming) => {
-        const local = prev.find(
-          (p) => p.id === incoming.id || (p.trackingId && p.trackingId === incoming.trackingId)
-        );
-        if (local && local.status === 'Validated' && incoming.status !== 'Validated') {
-          return {
-            ...incoming,
-            status: local.status,
-            trustStatus: local.trustStatus,
-            openForSolutions: local.openForSolutions,
-            currentStage: local.currentStage,
-            timeline:
-              local.timeline && local.timeline.length > incoming.timeline.length
-                ? local.timeline
-                : incoming.timeline,
-          };
-        }
-        return incoming;
-      });
-    });
-    setProjects(prList);
-    setNotifications(noList);
+    try {
+      const [chRes, prRes, noRes] = await Promise.allSettled([
+        challengeService.getChallenges(),
+        projectService.getProjects(),
+        communicationService.getNotifications(currentUser.id),
+      ]);
+
+      if (chRes.status === 'fulfilled') {
+        const chList = chRes.value;
+        setChallenges((prev) => {
+          if (prev.length === 0) return chList;
+          return chList.map((incoming) => {
+            const local = prev.find(
+              (p) => p.id === incoming.id || (p.trackingId && p.trackingId === incoming.trackingId)
+            );
+            if (local && local.status === 'Validated' && incoming.status !== 'Validated') {
+              return {
+                ...incoming,
+                status: local.status,
+                trustStatus: local.trustStatus,
+                openForSolutions: local.openForSolutions,
+                currentStage: local.currentStage,
+                timeline:
+                  local.timeline && local.timeline.length > incoming.timeline.length
+                    ? local.timeline
+                    : incoming.timeline,
+              };
+            }
+            return incoming;
+          });
+        });
+      } else {
+        console.warn('Could not refresh challenges:', chRes.reason);
+      }
+
+      if (prRes.status === 'fulfilled') {
+        setProjects(prRes.value);
+      }
+      if (noRes.status === 'fulfilled') {
+        setNotifications(noRes.value);
+      }
+    } catch (err) {
+      console.warn('refreshData error:', err);
+    }
   };
 
   const deleteChallenge = async (id: string): Promise<boolean> => {
@@ -703,7 +728,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Load the authenticated industry's real profile from Supabase. No demo industry data is used.
   useEffect(() => {
     const loadIndustryProfile = async () => {
-      if (!currentUser.id || currentUser.id === 'guest' || !['csr_org', 'industry_msme', 'research_institute'].includes(currentUser.role)) return;
+      if (!currentUser.id || currentUser.id === 'guest' || !isValidUUID(currentUser.id) || !['csr_org', 'industry_msme', 'research_institute'].includes(currentUser.role)) return;
 
       const { data, error } = await supabase
         .from('industry_profiles')
@@ -1728,6 +1753,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updateGovernmentSupportActionStatus,
         moderateContent,
         deleteChallenge,
+        addChallenge,
       }}
     >
       {children}

@@ -104,12 +104,16 @@ ROUTE_VIEW_MAP['/university-dashboard'] = 'university-dashboard';
 ROUTE_VIEW_MAP['/industry-dashboard'] = 'industry-dashboard';
 ROUTE_VIEW_MAP['/government-dashboard'] = 'government-dashboard';
 ROUTE_VIEW_MAP['/student-dashboard'] = 'student-dashboard';
+ROUTE_VIEW_MAP['/tracking'] = 'challenge-detail';
+ROUTE_VIEW_MAP['/track'] = 'challenge-detail';
+ROUTE_VIEW_MAP['/challenge'] = 'challenge-detail';
+ROUTE_VIEW_MAP['/challenge-detail'] = 'challenge-detail';
 
 export const getViewRoutePath = (viewId: string, params?: { challengeId?: string; projectId?: string }): string => {
   if (!viewId) return '/';
   
-  if (viewId === 'challenge-detail' && params?.challengeId) {
-    return `/challenge/${params.challengeId}`;
+  if ((viewId === 'challenge-detail' || viewId === 'citizen-challenge-detail') && params?.challengeId) {
+    return `/tracking/${params.challengeId}`;
   }
   if ((viewId === 'project-workspace' || viewId === 'project-detail') && params?.projectId) {
     return `/project/${params.projectId}`;
@@ -121,18 +125,30 @@ export const getViewRoutePath = (viewId: string, params?: { challengeId?: string
 };
 
 export const getRouteViewInfo = (pathname: string): { view: AppView; challengeId?: string; projectId?: string } => {
-  const cleanPath = pathname.replace(/\/$/, '') || '/';
+  const [pathOnly] = pathname.split('?');
+  const cleanPath = (pathOnly || pathname).replace(/\/$/, '') || '/';
 
-  // Handle parameterized routes: /challenge/:id
-  const challengeMatch = cleanPath.match(/^\/challenge\/([^/]+)$/);
+  // Handle parameterized routes: /challenge/:id, /tracking/:id, /track/:id, /tracking-id/:id
+  const challengeMatch = cleanPath.match(/^\/(?:challenge|tracking|track|tracking-id)\/([^/]+)$/i);
   if (challengeMatch) {
-    return { view: 'challenge-detail', challengeId: challengeMatch[1] };
+    return { view: 'challenge-detail', challengeId: decodeURIComponent(challengeMatch[1]) };
   }
 
   // Handle parameterized routes: /project/:id
-  const projectMatch = cleanPath.match(/^\/project\/([^/]+)$/);
+  const projectMatch = cleanPath.match(/^\/project\/([^/]+)$/i);
   if (projectMatch) {
-    return { view: 'project-workspace', projectId: projectMatch[1] };
+    return { view: 'project-workspace', projectId: decodeURIComponent(projectMatch[1]) };
+  }
+
+  // Handle query parameter fallback: /tracking?trackingId=... or /challenge-detail?trackingId=...
+  if (typeof window !== 'undefined' && window.location.search) {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryTrackingId = searchParams.get('trackingId') || searchParams.get('id');
+      if (queryTrackingId && (cleanPath === '/tracking' || cleanPath === '/track' || cleanPath === '/challenge' || cleanPath === '/challenge-detail')) {
+        return { view: 'challenge-detail', challengeId: queryTrackingId };
+      }
+    } catch (_) {}
   }
 
   if (cleanPath in ROUTE_VIEW_MAP) {

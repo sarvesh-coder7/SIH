@@ -18,13 +18,12 @@ export interface AIAnalysisRequest {
 /**
  * AI SERVER URL
  *
- * Local development:
- *   http://127.0.0.1:8001
- *
- * Production:
- *   VITE_AI_SERVER_URL from Vercel Environment Variables
+ * Configurable via environment variable:
+ *   VITE_AI_API_URL or VITE_AI_SERVER_URL
+ * Defaults to http://127.0.0.1:8001
  */
 const AI_SERVER_URL = (
+  import.meta.env.VITE_AI_API_URL ||
   import.meta.env.VITE_AI_SERVER_URL ||
   'http://127.0.0.1:8001'
 ).replace(/\/$/, '');
@@ -333,101 +332,68 @@ export const aiService = {
     response: string;
     provider: string;
   }> => {
-
     const cleanMessage = message.trim();
 
     if (!cleanMessage) {
-      throw new Error(
-        'Please enter a message.'
-      );
+      throw new Error('Please enter a message.');
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
 
-      const response = await fetch(
-        `${AI_SERVER_URL}/chat`,
-        {
-          method: 'POST',
+      const response = await fetch(`${AI_SERVER_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: cleanMessage,
+        }),
+        signal: controller.signal,
+      });
 
-          headers: {
-            'Content-Type':
-              'application/json',
-          },
-
-          body: JSON.stringify({
-            message: cleanMessage,
-          }),
-        }
-      );
-
+      clearTimeout(timeoutId);
 
       // Successful response
       if (response.ok) {
-
-        const data =
-          await response.json();
-
+        const data = await response.json();
         return {
-          response:
-            data.response ||
-            'No response returned from AI.',
-
-          provider:
-            data.provider ||
-            'gemini',
+          response: data.response || 'No response returned from AI.',
+          provider: data.provider || 'gemini',
         };
       }
 
-
       // Server returned an error
-      let errorDetail =
-        'Failed to get response from AI server.';
-
+      let errorDetail = 'Failed to get response from AI server.';
       try {
-
-        const errorData =
-          await response.json();
-
+        const errorData = await response.json();
         if (errorData?.detail) {
-          errorDetail =
-            errorData.detail;
+          errorDetail = errorData.detail;
         }
-
       } catch {
-
-        errorDetail =
-          `AI server returned status ${response.status}: ${response.statusText}`;
+        errorDetail = `AI server returned status ${response.status}: ${response.statusText}`;
       }
 
       throw new Error(errorDetail);
-
     } catch (error: any) {
-
-      console.error(
-        'AI Chat Error:',
-        error
-      );
-
-      // Important:
-      // Do NOT try localhost fallback in production.
-      // A deployed website cannot access your computer's localhost.
       if (isProduction) {
-
-        throw new Error(
-          error?.message ||
-          'Unable to connect to the deployed AI server.'
-        );
+        throw new Error(error?.message || 'Unable to connect to the deployed AI server.');
       }
 
+      const isConnectionError =
+        error.name === 'AbortError' ||
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Load failed');
 
-      // Local development error
-      throw new Error(
-        error?.message ||
-        'Unable to connect to local AI server. Make sure FastAPI is running on port 8001.'
-      );
+      if (isConnectionError) {
+        throw new Error('Unable to connect to local AI server. Make sure FastAPI is running on port 8001.');
+      }
+
+      throw error;
     }
   },
-
 
   /**
    * Check AI server health.
@@ -440,43 +406,27 @@ export const aiService = {
     primary?: string;
     fallback?: string;
   } | null> => {
-
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      const response =
-        await fetch(
-          `${AI_SERVER_URL}/health`,
-          {
-            method: 'GET',
+      const response = await fetch(`${AI_SERVER_URL}/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
 
-            headers: {
-              'Content-Type':
-                'application/json',
-            },
-          }
-        );
-
+      clearTimeout(timeoutId);
 
       if (response.ok) {
-
         return await response.json();
       }
 
-
-      console.error(
-        'AI health check failed:',
-        response.status
-      );
-
       return null;
-
-    } catch (error) {
-
-      console.error(
-        'AI health check error:',
-        error
-      );
-
+    } catch {
+      // Safe fallback when AI server is offline or unreachable - avoids spamming console errors
       return null;
     }
   },
