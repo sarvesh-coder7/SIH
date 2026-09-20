@@ -131,7 +131,7 @@ class ChallengeService {
     };
   }
 
-  async getChallenges(filters?: { district?: string; category?: ChallengeCategory | 'All'; urgency?: ChallengeUrgency | 'All'; status?: ChallengeStatus | 'All'; search?: string; }): Promise<Challenge[]> {
+  async getChallenges(filters?: { district?: string; category?: ChallengeCategory | 'All'; urgency?: ChallengeUrgency | 'All'; status?: ChallengeStatus | 'All'; search?: string; userRole?: string; }): Promise<Challenge[]> {
     let query = supabase.from('challenges').select('*, profiles:submitted_by(id, name, email, phone, role)').order('submitted_at', { ascending: false });
     if (filters?.district && filters.district !== 'All') query = query.eq('district', filters.district);
     if (filters?.category && filters.category !== 'All') query = query.eq('category', filters.category);
@@ -140,6 +140,12 @@ class ChallengeService {
     if (filters?.search?.trim()) {
       const q = filters.search.trim();
       query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,district.ilike.%${q}%,block.ilike.%${q}%,tracking_id.ilike.%${q}%`);
+    }
+
+    // Enforce Government First Verification Stage for discovery queries
+    const isGov = filters?.userRole === 'govt_department' || filters?.userRole === 'platform_admin';
+    if (!isGov) {
+      query = query.not('status', 'in', '("Submitted","Under Review")');
     }
     const { data, error } = await query;
     if (error) throw new Error(error.message);
@@ -395,6 +401,68 @@ class ChallengeService {
     console.log("AUTH USER UUID:", currentAuthId);
     console.log("CITIZEN ID:", input.submittedBy?.userId);
 
+    if (!validSubmittedBy) {
+      console.warn("No valid UUID for user. Operating in demo isolation mode - bypassing Supabase insertion.");
+      // Return a fully hydrated mock challenge for demo users
+      const mockId = `demo-ch-${Date.now()}`;
+      return {
+        id: mockId,
+        trackingId,
+        title: input.title,
+        description: input.description,
+        problemSummary: input.description,
+        category: input.category,
+        subCategory: input.subCategory || aiAnalysis.subCategory,
+        district: input.district || 'Ranchi',
+        block: input.block || '',
+        village: input.village || '',
+        gpsCoordinates: { lat: latVal, lng: lngVal },
+        submittedBy: {
+          userId: input.submittedBy?.userId || 'guest',
+          userName: input.submittedBy?.userName || 'Citizen Submitter',
+          userRole: input.submittedBy?.userRole || 'Citizen',
+          contactNumber: input.submittedBy?.contactNumber,
+        },
+        affectedPopulation: Math.max(1, Number(input.affectedPopulation) || 1),
+        frequency: input.frequency || 'Daily',
+        urgency: input.urgency || 'High',
+        expectedImpact: input.expectedImpact || '',
+        additionalInformation: input.additionalInformation,
+        submittedAt: new Date().toISOString(),
+        status: 'Submitted',
+        currentStage: 'Challenge Submitted',
+        trustStatus: 'Evidence Submitted',
+        viewsCount: 1,
+        endorsementsCount: 1,
+        aiAnalysis,
+        timeline: [
+          {
+            stage: 'Challenge Submitted',
+            date: new Date().toISOString(),
+            description: `Filed by ${input.submittedBy?.userName || 'Citizen Submitter'} from ${input.district || 'Jharkhand'}. Initial review pending.`,
+            actor: input.submittedBy?.userName || 'Citizen Submitter',
+          },
+          {
+            stage: 'AI Screening & Ingestion',
+            date: new Date().toISOString(),
+            description: `AI Priority Score: ${aiAnalysis.priorityScore}/100. Category: ${aiAnalysis.category}.`,
+            actor: 'AI Problem Triage Engine',
+          }
+        ],
+        evidence: (input.evidenceUrls || []).map((url, i) => ({
+          id: `ev-${Date.now()}-${i}`,
+          type: 'image',
+          url,
+          caption: 'Evidence',
+          timestamp: new Date().toISOString(),
+          isGeotagged: false,
+          source: 'upload',
+        })),
+        tags: [input.category, input.district || 'Jharkhand', 'Crowdsourced'],
+        openForSolutions: false,
+      } as Challenge;
+    }
+
     const { data: row, error } = await supabase
       .from('challenges')
       .insert(insertPayload)
@@ -612,6 +680,7 @@ class ChallengeService {
 
     if (error) {
       console.warn('Could not update challenge in Supabase:', error.message);
+      throw new Error(error.message);
     }
 
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetDbId)) {

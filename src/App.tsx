@@ -60,7 +60,15 @@ import { JharkhandMap } from './components/map/JharkhandMap';
 import { PublicImpactDashboard } from './components/impact/PublicImpactDashboard';
 
 const AppContent: React.FC = () => {
-  const { currentView, currentRole } = useApp();
+  const { currentView, currentRole, isAuthLoading } = useApp();
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="w-10 h-10 rounded-full border-4 border-amber-500 border-t-transparent animate-spin"></div>
+      </div>
+    );
+  }
 
   // Standalone full-screen views (landing, role selection, login, signup)
   const isStandalonePublicView =

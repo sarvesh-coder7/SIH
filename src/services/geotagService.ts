@@ -76,10 +76,14 @@ export function getCurrentGPS(): Promise<GPSData> {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        let finalLat = position.coords.latitude;
+        let finalLng = position.coords.longitude;
+        let finalAcc = position.coords.accuracy;
+
         resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
+          latitude: finalLat,
+          longitude: finalLng,
+          accuracy: finalAcc,
           timestamp: position.timestamp,
         });
       },
@@ -405,7 +409,7 @@ export function stampPhotoWithAddress(
 // ============================================================
 
 /** Maximum acceptable GPS accuracy in metres for reliable geotagging. */
-const MAX_ACCEPTABLE_ACCURACY_METERS = 500;
+const MAX_ACCEPTABLE_ACCURACY_METERS = 2000;
 
 /**
  * Returns true if the GPS accuracy is acceptable for geotagging.
@@ -423,4 +427,24 @@ export function getAccuracyLabel(accuracy: number): string {
   if (accuracy <= 150) return 'Fair';
   if (accuracy <= 500) return 'Poor';
   return 'Very Poor';
+}
+
+/**
+ * Calculates the great-circle distance between two GPS coordinates using the Haversine formula.
+ * Returns the distance in meters.
+ */
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Earth radius in meters
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const Δφ = toRad(lat2 - lat1);
+  const Δλ = toRad(lon2 - lon1);
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
 }

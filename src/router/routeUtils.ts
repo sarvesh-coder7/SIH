@@ -25,6 +25,7 @@ export const VIEW_ROUTE_MAP: Record<string, string> = {
 
   // University
   'university-dashboard': '/dashboard/university',
+  'university-projects': '/dashboard/university/projects',
   'university-challenges': '/dashboard/university/challenges',
   'university-teams': '/dashboard/university/teams',
   'university-proposals': '/dashboard/university/proposals',
@@ -115,6 +116,18 @@ export const getViewRoutePath = (viewId: string, params?: { challengeId?: string
   if ((viewId === 'challenge-detail' || viewId === 'citizen-challenge-detail') && params?.challengeId) {
     return `/tracking/${params.challengeId}`;
   }
+  if (viewId === 'university-projects' && params?.projectId) {
+    return `/dashboard/university/project/${params.projectId}`;
+  }
+  if (viewId === 'student-projects' && params?.projectId) {
+    return `/dashboard/student/project/${params.projectId}`;
+  }
+  if (viewId === 'government-projects' && params?.projectId) {
+    return `/dashboard/government/project/${params.projectId}`;
+  }
+  if (viewId === 'industry-project-detail' && params?.projectId) {
+    return `/dashboard/industry/project/${params.projectId}`;
+  }
   if ((viewId === 'project-workspace' || viewId === 'project-detail') && params?.projectId) {
     return `/project/${params.projectId}`;
   }
@@ -132,6 +145,30 @@ export const getRouteViewInfo = (pathname: string): { view: AppView; challengeId
   const challengeMatch = cleanPath.match(/^\/(?:challenge|tracking|track|tracking-id)\/([^/]+)$/i);
   if (challengeMatch) {
     return { view: 'challenge-detail', challengeId: decodeURIComponent(challengeMatch[1]) };
+  }
+
+  // Handle parameterized routes: /dashboard/university/project/:id
+  const uniProjectMatch = cleanPath.match(/^\/dashboard\/university\/project\/([^/]+)$/i);
+  if (uniProjectMatch) {
+    return { view: 'university-projects', projectId: decodeURIComponent(uniProjectMatch[1]) };
+  }
+
+  // Handle parameterized routes: /dashboard/student/project/:id
+  const studentProjectMatch = cleanPath.match(/^\/dashboard\/student\/project\/([^/]+)$/i);
+  if (studentProjectMatch) {
+    return { view: 'student-projects', projectId: decodeURIComponent(studentProjectMatch[1]) };
+  }
+
+  // Handle parameterized routes: /dashboard/government/project/:id
+  const govProjectMatch = cleanPath.match(/^\/dashboard\/government\/project\/([^/]+)$/i);
+  if (govProjectMatch) {
+    return { view: 'government-projects', projectId: decodeURIComponent(govProjectMatch[1]) };
+  }
+
+  // Handle parameterized routes: /dashboard/industry/project/:id
+  const indProjectMatch = cleanPath.match(/^\/dashboard\/industry\/project\/([^/]+)$/i);
+  if (indProjectMatch) {
+    return { view: 'industry-project-detail', projectId: decodeURIComponent(indProjectMatch[1]) };
   }
 
   // Handle parameterized routes: /project/:id

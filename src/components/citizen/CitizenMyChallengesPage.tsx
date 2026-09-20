@@ -70,8 +70,13 @@ export const CitizenMyChallengesPage: React.FC = () => {
       if (!targetAuthUuid) {
         // No valid Supabase Auth UUID available.
         // Do NOT send non-UUID strings (like 'user-cit-01') to PostgreSQL UUID column.
-        const fallback = challenges.filter((c: any) => c.submittedBy?.userId === currentUser?.id);
-        setLiveChallenges(fallback);
+        if (currentUser?.id && !['guest'].includes(currentUser.id) && !isValidUUID(currentUser.id)) {
+          // Demo Mode
+          const fallback = challenges.filter((c: any) => c.submittedBy?.userId === currentUser?.id);
+          setLiveChallenges(fallback);
+        } else {
+          setLiveChallenges([]);
+        }
         setFetchError(null);
         setIsLoading(false);
         return;
@@ -106,7 +111,7 @@ export const CitizenMyChallengesPage: React.FC = () => {
   // Only show challenges submitted by the current user
   const myOwnChallenges = liveChallenges !== null
     ? liveChallenges
-    : challenges.filter((ch) => ch.submittedBy?.userId === currentUser.id);
+    : (currentUser?.id && !['guest'].includes(currentUser.id) && !isValidUUID(currentUser.id) ? challenges.filter((ch) => ch.submittedBy?.userId === currentUser.id) : []);
 
   // Filter list
   const filteredChallenges = myOwnChallenges.filter((ch) => {
@@ -132,7 +137,7 @@ export const CitizenMyChallengesPage: React.FC = () => {
     if (selectedStatus !== 'All') {
       if (selectedStatus === 'Submitted' && ch.status !== 'Submitted') return false;
       if (selectedStatus === 'Under Review' && ch.status !== 'Under Review') return false;
-      if (selectedStatus === 'Published' && ch.status !== 'Validated') return false;
+      if (selectedStatus === '✓ VERIFIED' && ch.status !== 'Validated') return false;
       if (selectedStatus === 'Open for Solutions' && ch.status !== 'University Matching') return false;
       if (
         selectedStatus === 'Solution in Progress' &&
@@ -225,7 +230,7 @@ export const CitizenMyChallengesPage: React.FC = () => {
               <option value="All">All Statuses</option>
               <option value="Submitted">Submitted</option>
               <option value="Under Review">Under Review</option>
-              <option value="Published">Published</option>
+              <option value="✓ VERIFIED">✓ VERIFIED</option>
               <option value="Open for Solutions">Open for Solutions</option>
               <option value="Solution in Progress">Solution in Progress</option>
               <option value="Completed">Completed</option>
@@ -349,6 +354,7 @@ export const CitizenMyChallengesPage: React.FC = () => {
                 progressColor = 'bg-emerald-500';
                 statusBoxBg = 'bg-emerald-50';
                 statusBoxColor = 'text-emerald-700';
+                statusBoxTitle = '✓ VERIFIED';
                 statusBoxDesc = 'Report verified for action';
                 statusIcon = <CheckCircle className="w-3.5 h-3.5 mt-0.5 text-emerald-600 shrink-0" />;
                 break;

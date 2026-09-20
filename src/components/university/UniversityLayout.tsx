@@ -199,7 +199,7 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
           badgeColor: 'bg-blue-100 text-blue-800',
         },
         {
-          id: 'project-workspace' as const,
+          id: 'university-projects' as const,
           label: 'Active Projects',
           icon: Rocket,
           badge: `${projects.length} Active`,

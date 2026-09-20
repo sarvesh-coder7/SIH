@@ -44,7 +44,7 @@ export const getCitizenStatusLabel = (status: string, isReopened?: boolean): { l
     case 'Under Review':
       return { label: 'Under Review', color: 'text-amber-800', bg: 'bg-amber-50', border: 'border-amber-200' };
     case 'Validated':
-      return { label: 'Published', color: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200' };
+      return { label: '✓ VERIFIED', color: 'text-emerald-800', bg: 'bg-emerald-50', border: 'border-emerald-200' };
     case 'University Matching':
       return { label: 'Open for Solutions', color: 'text-indigo-800', bg: 'bg-indigo-50', border: 'border-indigo-200' };
     case 'Assigned':
@@ -145,8 +145,13 @@ export const CitizenDashboard: React.FC = () => {
       if (!targetAuthUuid) {
         // No valid Supabase Auth UUID available.
         // Do NOT send non-UUID strings (like 'user-cit-01') to PostgreSQL UUID column.
-        const fallback = challenges.filter((c) => c.submittedBy?.userId === currentUser?.id);
-        setCitizenReports(fallback);
+        if (currentUser?.id && !['guest'].includes(currentUser.id) && !isValidUUID(currentUser.id)) {
+          // Demo mode
+          const fallback = challenges.filter((c) => c.submittedBy?.userId === currentUser?.id);
+          setCitizenReports(fallback);
+        } else {
+          setCitizenReports([]);
+        }
         setFetchError(null);
         setIsLoadingReports(false);
         return;
@@ -181,7 +186,7 @@ export const CitizenDashboard: React.FC = () => {
   // Citizen's reports — live Supabase query takes precedence over in-memory cache
   const myReports = citizenReports !== null
     ? citizenReports
-    : challenges.filter((c) => c.submittedBy?.userId === currentUser.id);
+    : (currentUser?.id && !['guest'].includes(currentUser.id) && !isValidUUID(currentUser.id) ? challenges.filter((c) => c.submittedBy?.userId === currentUser.id) : []);
 
   // 4 Simple Summary KPI Cards (Section 5)
   const stats = {

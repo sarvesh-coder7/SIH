@@ -60,7 +60,13 @@ export class AuthService {
 
   public async restoreCurrentUser(): Promise<AuthUser | null> {
     const { data } = await supabase.auth.getSession();
-    if (!data.session?.user) return null;
+    if (!data.session?.user) {
+      // Fallback: forcefully fetch the user from the server if session is missing from cache
+      const { data: userData, error } = await supabase.auth.getUser();
+      if (error || !userData.user) return null;
+      await this.syncSessionFromSupabase(userData.user);
+      return this.currentSession?.user || null;
+    }
     await this.syncSessionFromSupabase(data.session.user, data.session);
     return this.currentSession?.user || null;
   }

@@ -58,6 +58,8 @@ export const GovernmentVerificationPage: React.FC = () => {
 
   // Confirmation dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
   // Filter queue
   const filteredQueue = challenges.filter((c) => {
@@ -108,7 +110,7 @@ export const GovernmentVerificationPage: React.FC = () => {
     setShowConfirmDialog(true);
   };
 
-  const handleExecuteVerification = () => {
+  const handleExecuteVerification = async () => {
     if (!activeModalChallenge || !decisionAction) return;
 
     let finalReason = officialReason.trim() || 'Verified by State Authority after field review.';
@@ -130,14 +132,31 @@ export const GovernmentVerificationPage: React.FC = () => {
       finalReason += ` Marked as duplicate of Challenge #${duplicateOfId}.`;
     }
 
-    // Call context method
-    verifyChallenge(activeModalChallenge.id, decisionAction, finalReason);
+    setIsSubmitting(true);
+    try {
+      // Call context method
+      await verifyChallenge(activeModalChallenge.id, decisionAction, finalReason);
+    } catch (err: any) {
+      alert(`Action failed: ${err.message || 'Please check database connection.'}`);
+    } finally {
+      setIsSubmitting(false);
+      // Close modals
+      setShowConfirmDialog(false);
+      setActiveModalChallenge(null);
+      setDecisionAction(null);
+      // setSelectedChallengeId(null); // DO NOT call this, it causes re-render issues globally during unmount
+    }
+  };
 
-    // Close modals
-    setShowConfirmDialog(false);
-    setActiveModalChallenge(null);
-    setDecisionAction(null);
-    setSelectedChallengeId(null);
+  const handleDirectVerify = async (challengeId: string) => {
+    setVerifyingId(challengeId);
+    try {
+      await verifyChallenge(challengeId, 'VERIFIED', 'Verified by State Authority after field review.');
+    } catch (err: any) {
+      alert(`Verification failed: ${err.message || 'Please check database connection.'}`);
+    } finally {
+      setVerifyingId(null);
+    }
   };
 
   return (
@@ -290,11 +309,16 @@ export const GovernmentVerificationPage: React.FC = () => {
                   {!isVerified ? (
                     <>
                       <button
-                        onClick={() => handleOpenActionModal(ch, 'VERIFIED')}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+                        onClick={() => handleDirectVerify(ch.id)}
+                        disabled={verifyingId === ch.id}
+                        className={`px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 ${verifyingId === ch.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Verify Challenge</span>
+                        {verifyingId === ch.id ? (
+                          <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
+                        <span>{verifyingId === ch.id ? 'Verifying...' : 'Verify Challenge'}</span>
                       </button>
 
                       <button
@@ -494,13 +518,14 @@ export const GovernmentVerificationPage: React.FC = () => {
               </button>
               <button
                 onClick={handleTriggerConfirm}
+                disabled={isSubmitting}
                 className={`px-4 py-2 text-xs font-bold rounded-xl shadow-xs text-white ${
                   decisionAction === 'VERIFIED'
                     ? 'bg-emerald-600 hover:bg-emerald-500'
                     : decisionAction === 'REJECT'
                     ? 'bg-rose-600 hover:bg-rose-500'
                     : 'bg-slate-900 hover:bg-slate-800'
-                }`}
+                } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 Continue to Finalize
               </button>
@@ -546,9 +571,17 @@ export const GovernmentVerificationPage: React.FC = () => {
               </button>
               <button
                 onClick={handleExecuteVerification}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xs"
+                disabled={isSubmitting}
+                className={`px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                Execute Official Record
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <span>Execute Official Record</span>
+                )}
               </button>
             </div>
           </div>

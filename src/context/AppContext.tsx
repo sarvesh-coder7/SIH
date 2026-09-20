@@ -221,6 +221,7 @@ export const JUDGE_DEMO_STEPS: DemoStep[] = [
 ];
 
 interface AppContextType {
+  isAuthLoading: boolean;
   currentUser: User;
   setCurrentUser: (user: User) => void;
   currentRole: UserRole;
@@ -322,7 +323,7 @@ interface AppContextType {
     reason: string,
     notes?: string,
     requiredInfo?: string[]
-  ) => void;
+  ) => Promise<void>;
   confirmUniversityAssignment: (
     challengeId: string,
     universityName: string,
@@ -356,6 +357,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const initialRoute = typeof window !== 'undefined' ? getRouteViewInfo(window.location.pathname) : { view: 'landing' as AppView };
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [currentUser, setCurrentUser] = useState<User>({ id: 'guest', name: 'Guest', email: '', phone: '', role: 'citizen', district: 'Ranchi', verified: false, joinedDate: new Date().toISOString().split('T')[0] });
   const [currentView, setCurrentViewState] = useState<AppView>(initialRoute.view || 'landing');
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(initialRoute.challengeId || 'JH-2026-001248');
@@ -374,14 +376,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     let mounted = true;
     void authService.restoreCurrentUser().then((user) => {
-      if (mounted && user) setCurrentUser(user as any);
+      if (mounted) {
+        if (user) setCurrentUser(user as any);
+        setIsAuthLoading(false);
+      }
+    }).catch(err => {
+      console.error("Auth hydration error:", err);
+      if (mounted) setIsAuthLoading(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const user = await authService.restoreCurrentUser();
-        if (mounted && user) {
-          setCurrentUser(user as any);
+        try {
+          const user = await authService.restoreCurrentUser();
+          if (mounted && user) {
+            setCurrentUser(user as any);
+          }
+        } catch (err) {
+          console.error("Auth listener hydration error:", err);
         }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
@@ -396,6 +408,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             joinedDate: new Date().toISOString().split('T')[0],
           });
         }
+      }
+      if (mounted) {
+        setIsAuthLoading(false);
       }
     });
 
@@ -542,7 +557,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const navigateToProject = (id: string) => {
     setSelectedProjectId(id);
-    setCurrentView('project-workspace', { projectId: id });
+    
+    // Determine the role-specific view so layout parsing works on refresh
+    let targetView: AppView = 'project-workspace';
+    if (currentUser.role === 'university_admin' || currentUser.role === 'faculty_mentor') {
+      targetView = 'university-projects';
+    } else if (currentUser.role === 'student') {
+      targetView = 'student-projects';
+    } else if (currentUser.role === 'govt_department' || currentUser.role === 'platform_admin') {
+      targetView = 'government-projects';
+    } else if (currentUser.role === 'industry_msme' || currentUser.role === 'csr_org' || currentUser.role === 'research_institute') {
+      targetView = 'industry-project-detail';
+    }
+
+    setCurrentView(targetView, { projectId: id });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -557,7 +585,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const refreshData = async () => {
     try {
       const [chRes, prRes, noRes] = await Promise.allSettled([
-        challengeService.getChallenges(),
+        challengeService.getChallenges({ userRole: currentUser.role }),
         projectService.getProjects(),
         communicationService.getNotifications(currentUser.id),
       ]);
@@ -1010,13 +1038,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     );
   };
 
-  const verifyChallenge = (
+  const verifyChallenge = async (
     challengeId: string,
     decision: 'VERIFIED' | 'REQUEST_MORE_INFO' | 'FLAG' | 'REJECT' | 'DUPLICATE' | 'ARCHIVE',
     reason: string,
     notes?: string,
     requiredInfo?: string[]
-  ) => {
+  ): Promise<void> => {
     const targetChallenge = challenges.find(
       (c) => c.id === challengeId || (c.trackingId && c.trackingId === challengeId)
     );
@@ -1057,14 +1085,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       actor: currentGovernmentMember.name,
     };
 
+    // Persist to Supabase FIRST so database is the source of truth
+    const updated = await challengeService.updateChallengeStatus(targetChallenge.id, newStatus as any, {
+      trustStatus: newTrustStatus as any,
+      openForSolutions: decision === 'VERIFIED' ? true : undefined,
+      currentStage: decision === 'VERIFIED' ? 'Approved as Open Problem Statement' : `Verification Action: ${decision}`,
+      notes: reason + (notes ? ` | Notes: ${notes}` : ''),
+      actorName: currentGovernmentMember.name,
+    });
+
+    if (!updated) {
+      throw new Error("Failed to verify challenge in database.");
+    }
+
+    // Only update local state if DB update succeeds
     setChallenges((prev) =>
       prev.map((ch) => {
         if (ch.id === targetChallenge.id || (ch.trackingId && ch.trackingId === targetChallenge.trackingId)) {
           return {
             ...ch,
-            status: newStatus,
-            trustStatus: newTrustStatus,
-            openForSolutions: decision === 'VERIFIED' ? true : ch.openForSolutions,
+            ...updated, // overlay the verified DB fields
             timeline: [...ch.timeline, newTimelineEntry],
             additionalInformation:
               requiredInfo && requiredInfo.length > 0
@@ -1075,23 +1115,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return ch;
       })
     );
-
-    // Persist to Supabase so industry & university see it immediately
-    void challengeService.updateChallengeStatus(targetChallenge.id, newStatus as any, {
-      trustStatus: newTrustStatus as any,
-      openForSolutions: decision === 'VERIFIED' ? true : undefined,
-      currentStage: decision === 'VERIFIED' ? 'Approved as Open Problem Statement' : `Verification Action: ${decision}`,
-      notes: reason + (notes ? ` | Notes: ${notes}` : ''),
-      actorName: currentGovernmentMember.name,
-    }).then((updated) => {
-      if (updated) {
-        setChallenges((prev) =>
-          prev.map((ch) =>
-            ch.id === updated.id || (ch.trackingId && ch.trackingId === updated.trackingId) ? updated : ch
-          )
-        );
-      }
-    });
 
     const auditItem: ActivityLogItem = {
       id: `act-${Date.now()}`,
@@ -1677,6 +1700,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider
       value={{
+        isAuthLoading,
         currentUser,
         setCurrentUser,
         currentRole: currentUser.role,

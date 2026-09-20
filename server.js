@@ -138,8 +138,8 @@ function buildOtpEmail(otp) {
         
         <!-- TOP HEADER -->
         <tr><td align="center" style="padding:40px 30px 20px;">
-          <!-- Jharkhand Logo placeholder, safely loaded or fallback text -->
-          <div style="width:80px;height:80px;border-radius:50%;border:2px solid #0d5c3a;display:inline-block;line-height:80px;text-align:center;font-weight:bold;color:#0d5c3a;font-size:12px;margin-bottom:10px;">GOVT OF JH</div>
+          <!-- Jharkhand Logo using CID attachment -->
+          <img src="cid:jharkhand-logo" alt="Jharkhand Logo" width="100" style="display:inline-block;margin-bottom:10px;" />
           <div style="font-size:12px;color:#10253D;font-weight:bold;">सत्यमेव जयते</div>
           <div style="height:2px;background:#C79A32;width:40px;margin:20px auto 0;"></div>
         </td></tr>
@@ -161,12 +161,7 @@ function buildOtpEmail(otp) {
               <p style="margin:0 0 12px;font-size:11px;font-weight:bold;color:#10253D;letter-spacing:2px;text-transform:uppercase;">Your Verification Code</p>
               <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
                 <tr>
-                  <td style="font-family:monospace;font-size:42px;font-weight:bold;letter-spacing:12px;color:#10253D;padding-right:20px;border-right:1px solid #E5E7EB;">${otp}</td>
-                  <td style="padding-left:20px; vertical-align:middle; text-align:center; padding-top:6px;">
-                    <a href="mailto:?subject=My%20JH%20Innovation%20Connect%20OTP&body=Your%20OTP%20is:%20${otp}" title="Share / Copy OTP" style="display:inline-block;cursor:pointer;text-decoration:none;">
-                      <img src="https://img.icons8.com/fluency-systems-regular/48/10253D/copy.png" alt="Copy Icon" width="24" height="24" style="display:block;border:0;outline:none;" />
-                    </a>
-                  </td>
+                  <td style="font-family:monospace;font-size:42px;font-weight:bold;letter-spacing:12px;color:#10253D;user-select:all;-webkit-user-select:all;">${otp}</td>
                 </tr>
               </table>
             </td></tr>
@@ -238,12 +233,24 @@ async function sendOtpEmail(toEmail, otp) {
   }
 
   try {
+    const logoPath = path.join(__dirname, 'src', 'assets', 'images', 'Jharkhand logo.jpg');
+    const copyIconPath = path.join(__dirname, 'src', 'assets', 'images', 'copy-icon.png');
+
     const info = await transporter.sendMail({
       from: { name: senderName, address: fromAddress },
       to: toEmail,
       subject,
       text,
       html,
+      attachments: [
+        {
+          filename: 'jharkhand-logo.jpg',
+          path: logoPath,
+          cid: 'jharkhand-logo',
+          contentType: 'image/jpeg',
+          contentDisposition: 'inline'
+        }
+      ]
     });
     if (!info.rejected || info.rejected.length === 0) {
       console.log(`✓ Email sent via SMTP to ${toEmail}`);
