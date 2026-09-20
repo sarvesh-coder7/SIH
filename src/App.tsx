@@ -50,7 +50,7 @@ import { StudentSettingsPage } from './components/student/StudentSettingsPage';
 import { ExploreChallengesPage } from './components/public/ExploreChallengesPage';
 import { UniversitiesPage } from './components/public/UniversitiesPage';
 import { IndustryPage } from './components/public/IndustryPage';
-import { HowItWorksPage } from './components/public/HowItWorksPage';
+import { AboutPage } from './components/public/AboutPage';
 import { IndustryDashboard } from './components/industry/IndustryDashboard';
 import { IndustryLayout } from './components/industry/IndustryLayout';
 import { GovernmentDashboard } from './components/government/GovernmentDashboard';
@@ -67,7 +67,8 @@ const AppContent: React.FC = () => {
     currentView === 'landing' ||
     currentView === 'role-selection' ||
     currentView === 'login' ||
-    currentView === 'signup';
+    currentView === 'signup' ||
+    currentView === 'about';
 
   // View overrides take precedence so routing commands (like open report) always open the right workspace
   const isCitizenTarget =
@@ -147,8 +148,8 @@ const AppContent: React.FC = () => {
           return <JharkhandMap />;
         case 'impact':
           return <PublicImpactDashboard />;
-        case 'how-it-works':
-          return <HowItWorksPage />;
+        case 'about':
+          return <AboutPage />;
         default:
           return <CitizenDashboard />;
       }
@@ -212,8 +213,8 @@ const AppContent: React.FC = () => {
           return <JharkhandMap />;
         case 'impact':
           return <PublicImpactDashboard />;
-        case 'how-it-works':
-          return <HowItWorksPage />;
+        case 'about':
+          return <AboutPage />;
         default:
           return currentRole === 'student' ? <StudentDashboard /> : <UniversityDashboard />;
       }
@@ -257,8 +258,8 @@ const AppContent: React.FC = () => {
           return <IndustryPage />;
         case 'impact':
           return <PublicImpactDashboard />;
-        case 'how-it-works':
-          return <HowItWorksPage />;
+        case 'about':
+          return <AboutPage />;
         default:
           return <LandingPage />;
       }
@@ -275,8 +276,9 @@ const AppContent: React.FC = () => {
           {currentView === 'role-selection' && <RoleSelectionPage />}
           {currentView === 'login' && <LoginPage initialRole={currentRole} />}
           {currentView === 'signup' && <SignUpPage initialRole={currentRole} />}
+          {currentView === 'about' && <AboutPage />}
         </main>
-        {currentView !== 'landing' && currentView !== 'role-selection' && <Footer />}
+        {currentView !== 'landing' && currentView !== 'role-selection' && currentView !== 'about' && currentView !== 'signup' && currentView !== 'login' && <Footer />}
         <AuthModal />
       </div>
     );

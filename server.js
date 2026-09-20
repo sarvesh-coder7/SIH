@@ -21,20 +21,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-// Brevo SMTP (Nodemailer relay)
-const brevoSmtpHost = process.env.BREVO_SMTP_HOST;
-const brevoSmtpPort = parseInt(process.env.BREVO_SMTP_PORT || '587', 10);
-const brevoSmtpUser = process.env.BREVO_SMTP_USER;       // SMTP login (e.g. b7401e001@smtp-brevo.com)
-const brevoSmtpPass = process.env.BREVO_SMTP_PASSWORD;    // SMTP password (xsmtpsib-…)
-const brevoSenderEmail = process.env.BREVO_SENDER_EMAIL;  // Verified sender (e.g. sarvesshhh@gmail.com)
-const brevoSenderName = process.env.BREVO_SENDER_NAME || 'JH Innovation Connect - Govt of Jharkhand';
+// SMTP Configuration
+const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASSWORD;
+const senderEmail = process.env.SENDER_EMAIL || smtpUser;
+const senderName = process.env.SENDER_NAME || 'JH Innovation Connect - Govt of Jharkhand';
 
-// Brevo HTTP API (separate key — xkeysib-…)
-const brevoApiKey = process.env.BREVO_API_KEY;            // HTTP API key only
-
-const hasBrevoSmtp = Boolean(brevoSmtpUser && brevoSmtpPass);
-const hasBrevoApi = Boolean(brevoApiKey);
-const hasAnyEmail = hasBrevoSmtp || hasBrevoApi;
+const hasSmtp = Boolean(smtpUser && smtpPass);
 
 // =============================================================================
 // DIAGNOSTICS (never print secret values)
@@ -44,9 +39,8 @@ console.log('   JH INNOVATION CONNECT - API & AUTH SERVER');
 console.log('====================================================');
 console.log('• Supabase URL:     ', supabaseUrl ? '✓ Configured' : '✗ Missing');
 console.log('• Supabase Key:     ', supabaseKey ? '✓ Configured' : '✗ Missing');
-console.log('• Brevo SMTP:       ', hasBrevoSmtp ? `✓ Configured (${brevoSmtpUser})` : '✗ Not configured');
-console.log('• Brevo HTTP API:   ', hasBrevoApi ? '✓ Configured' : '✗ Not configured');
-console.log('• Sender Email:     ', brevoSenderEmail || '(not set — will use SMTP user)');
+console.log('• SMTP Config:      ', hasSmtp ? `✓ Configured (${smtpUser})` : '✗ Not configured');
+console.log('• Sender Email:     ', senderEmail || '(not set)');
 console.log('====================================================');
 
 // =============================================================================
@@ -93,67 +87,36 @@ const verifyLimiter = rateLimit({
 });
 
 // =============================================================================
-// NODEMAILER TRANSPORTER (Brevo SMTP)
+// NODEMAILER TRANSPORTER (SMTP)
 // =============================================================================
 let transporter = null;
 let smtpVerified = false;
-const fromAddress = brevoSenderEmail || brevoSmtpUser || 'no-reply@jharkhand.gov.in';
+const fromAddress = senderEmail || smtpUser || 'no-reply@jharkhand.gov.in';
 
-if (hasBrevoSmtp) {
+if (hasSmtp) {
   try {
     transporter = nodemailer.createTransport({
-      host: brevoSmtpHost || 'smtp-relay.brevo.com',
-      port: brevoSmtpPort,
-      secure: brevoSmtpPort === 465,
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
       auth: {
-        user: brevoSmtpUser,
-        pass: brevoSmtpPass,
+        user: smtpUser,
+        pass: smtpPass,
       },
     });
 
     transporter.verify().then(() => {
       smtpVerified = true;
-      console.log(`✓ SMTP connection verified (${brevoSmtpHost || 'smtp-relay.brevo.com'}:${brevoSmtpPort})`);
+      console.log(`✓ SMTP connection verified (${smtpHost}:${smtpPort})`);
     }).catch((err) => {
       console.warn(`⚠️ SMTP verification failed: ${err.message}`);
-      if (hasBrevoApi) {
-        console.log('  → Brevo HTTP API will be used as fallback.');
-      } else {
-        console.error('  ✗ No fallback email method available. OTP emails will not be delivered.');
-      }
+      console.error('  ✗ OTP emails will not be delivered.');
     });
   } catch (e) {
     console.error('✗ SMTP transporter init failed:', e.message);
   }
-} else if (!hasBrevoApi) {
+} else {
   console.warn('⚠️ No email delivery configured. OTP emails cannot be sent.');
-}
-
-// =============================================================================
-// BREVO HTTP API — fallback that bypasses SMTP IP restrictions
-// =============================================================================
-async function sendViaBrevoApi(toEmail, subject, htmlContent, textContent) {
-  if (!brevoApiKey) throw new Error('BREVO_API_KEY is not configured.');
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'accept': 'application/json',
-      'api-key': brevoApiKey,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      sender: { name: brevoSenderName, email: fromAddress },
-      to: [{ email: toEmail }],
-      subject,
-      htmlContent,
-      textContent,
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(`Brevo API ${res.status}: ${body.message || JSON.stringify(body)}`);
-  }
-  return await res.json();
 }
 
 // =============================================================================
@@ -167,74 +130,131 @@ const otpStore = new Map();
 function buildOtpEmail(otp) {
   const html = `<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"><title>Your OTP Code</title></head>
-<body style="margin:0;padding:0;background:#fbf8ee;font-family:Arial,Helvetica,sans-serif;color:#24332b;">
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fbf8ee;padding:30px 10px;">
+<head><meta charset="UTF-8"><title>Verify your email address</title></head>
+<body style="margin:0;padding:0;background:#F7F4EC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#10253D;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F4EC;padding:40px 10px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2d6bc;">
-        <tr><td style="padding:24px 30px;background:#0d5c3a;color:#ffffff;">
-          <h2 style="margin:0;font-size:20px;color:#ffffff;">Government of Jharkhand</h2>
-          <p style="margin:4px 0 0;font-size:12px;color:#e7dfcf;">Societal Innovation Collaboration Portal</p>
+      <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #E5E7EB;box-shadow:0 4px 6px rgba(0,0,0,0.05);">
+        
+        <!-- TOP HEADER -->
+        <tr><td align="center" style="padding:40px 30px 20px;">
+          <!-- Jharkhand Logo placeholder, safely loaded or fallback text -->
+          <div style="width:80px;height:80px;border-radius:50%;border:2px solid #0d5c3a;display:inline-block;line-height:80px;text-align:center;font-weight:bold;color:#0d5c3a;font-size:12px;margin-bottom:10px;">GOVT OF JH</div>
+          <div style="font-size:12px;color:#10253D;font-weight:bold;">सत्यमेव जयते</div>
+          <div style="height:2px;background:#C79A32;width:40px;margin:20px auto 0;"></div>
         </td></tr>
-        <tr><td style="padding:32px 30px;background:#ffffff;">
-          <p style="font-size:15px;color:#333333;margin:0 0 20px;">
-            Hello, use the following One-Time Password (OTP) to verify your account:
+        
+        <!-- MAIN CONTENT -->
+        <tr><td style="padding:20px 40px 30px;background:#ffffff;">
+          <h1 style="margin:0 0 24px;font-size:28px;color:#10253D;font-weight:bold;">Verify your email address</h1>
+          <p style="font-size:16px;color:#10253D;margin:0 0 16px;line-height:1.5;">Hello,</p>
+          <p style="font-size:16px;color:#10253D;margin:0 0 24px;line-height:1.5;">
+            Thank you for registering with <strong>JH Innovation Connect</strong>.
           </p>
-          <div style="background:#fbf8ee;border:2px dashed #0d5c3a;border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
-            <span style="font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:8px;color:#0d5c3a;">${otp}</span>
-          </div>
-          <p style="font-size:12px;color:#666666;margin:20px 0 0;">
-            This code is valid for 5 minutes. Do not share this OTP with anyone.
+          <p style="font-size:16px;color:#10253D;margin:0 0 16px;line-height:1.5;">
+            Use the following One-Time Password (OTP) to verify your email address:
           </p>
+          
+          <!-- OTP BOX -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#FCF8ED;border:2px solid #C79A32;border-radius:12px;margin:20px 0;">
+            <tr><td align="center" style="padding:24px 20px;">
+              <p style="margin:0 0 12px;font-size:11px;font-weight:bold;color:#10253D;letter-spacing:2px;text-transform:uppercase;">Your Verification Code</p>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                <tr>
+                  <td style="font-family:monospace;font-size:42px;font-weight:bold;letter-spacing:12px;color:#10253D;padding-right:20px;border-right:1px solid #E5E7EB;">${otp}</td>
+                  <td style="padding-left:20px; text-align:center;">
+                    <a href="javascript:void(0)" onclick="navigator.clipboard.writeText('${otp}').then(() => { var msg = document.getElementById('copy-msg'); if(msg) msg.innerText = 'Copied!'; }).catch(() => {}); return false;" style="display:inline-block;cursor:pointer;text-decoration:none;">
+                      <img src="https://img.icons8.com/fluency-systems-regular/48/10253D/copy.png" alt="Copy Icon" width="24" height="24" style="display:block;border:0;outline:none;" />
+                    </a>
+                    <div id="copy-msg" style="font-size:11px;color:#C79A32;margin-top:4px;font-weight:bold;min-height:16px;"></div>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+          
+          <!-- OTP EXPIRY -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 30px;">
+            <tr>
+              <td width="30" valign="top" style="padding-top:2px;">
+                <div style="width:20px;height:20px;border-radius:50%;border:2px solid #C79A32;text-align:center;line-height:20px;color:#C79A32;font-size:14px;font-weight:bold;">L</div>
+              </td>
+              <td style="font-size:14px;color:#10253D;line-height:1.5;">
+                This OTP is valid for 5 minutes. Please do not share this code with anyone.
+              </td>
+            </tr>
+          </table>
+          
+          <!-- SECURITY INFORMATION -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F7F4EC;border-radius:8px;padding:20px;margin-bottom:24px;">
+            <tr>
+              <td width="50" valign="top">
+                <div style="background:#F4E8C8;border-radius:50%;width:40px;height:40px;text-align:center;line-height:40px;">
+                  <span style="color:#C79A32;font-weight:bold;">🔒</span>
+                </div>
+              </td>
+              <td style="padding-left:16px;">
+                <h3 style="margin:0 0 6px;font-size:14px;color:#10253D;font-weight:bold;">For your security</h3>
+                <p style="margin:0;font-size:13px;color:#1B344F;line-height:1.5;">
+                  Never share your OTP with anyone. JH Innovation Connect will never ask you to disclose your OTP by phone, message, or email.
+                </p>
+              </td>
+            </tr>
+          </table>
+          
+          <!-- UNREQUESTED EMAIL MESSAGE -->
+          <p style="margin:0 0 20px;font-size:13px;color:#667085;line-height:1.5;">
+            If you did not request this verification code, you can safely ignore this email.
+          </p>
+          <div style="height:1px;background:#E5E7EB;width:100%;"></div>
         </td></tr>
+        
+        <!-- FOOTER -->
+        <tr><td align="center" style="padding:30px 40px;background:#F7F4EC;">
+          <h4 style="margin:0 0 4px;font-size:14px;color:#10253D;font-weight:bold;">JH INNOVATION CONNECT</h4>
+          <p style="margin:0 0 4px;font-size:12px;color:#1B344F;">Government of Jharkhand</p>
+          <p style="margin:0 0 16px;font-size:12px;color:#1B344F;">Societal Innovation Collaboration Portal</p>
+          <div style="height:2px;background:#C79A32;width:30px;margin:0 auto 16px;"></div>
+          <p style="margin:0;font-size:11px;color:#667085;">© Government of Jharkhand. All rights reserved.</p>
+        </td></tr>
+        
       </table>
     </td></tr>
   </table>
 </body>
 </html>`;
-  const text = `Your OTP is: ${otp}\nThis code expires in 5 minutes. Do not share it with anyone.`;
+  const text = `Verify your email address\n\nHello,\n\nThank you for registering with JH Innovation Connect.\n\nUse the following One-Time Password (OTP) to verify your email address:\n\n${otp}\n\nThis OTP is valid for 5 minutes. Please do not share this code with anyone.\n\nIf you did not request this verification code, you can safely ignore this email.\n\n© Government of Jharkhand. All rights reserved.`;
   return { html, text };
 }
 
 // =============================================================================
-// SEND EMAIL — tries SMTP first, falls back to HTTP API
+// SEND EMAIL — uses SMTP
 // =============================================================================
 async function sendOtpEmail(toEmail, otp) {
-  const subject = 'Verification OTP - JH Innovation Connect';
+  const subject = 'Verify your JH Innovation Connect account';
   const { html, text } = buildOtpEmail(otp);
 
-  // Strategy 1: SMTP (if verified)
-  if (transporter && smtpVerified) {
-    try {
-      const info = await transporter.sendMail({
-        from: { name: brevoSenderName, address: fromAddress },
-        to: toEmail,
-        subject,
-        text,
-        html,
-      });
-      if (!info.rejected || info.rejected.length === 0) {
-        console.log(`✓ Email sent via SMTP to ${toEmail}`);
-        return true;
-      }
-    } catch (err) {
-      console.warn(`⚠️ SMTP send failed: ${err.message}`);
-    }
+  if (!transporter) {
+    return { success: false, error: 'Email delivery is not configured on the server.' };
   }
 
-  // Strategy 2: Brevo HTTP API (bypasses IP restrictions)
-  if (hasBrevoApi) {
-    try {
-      await sendViaBrevoApi(toEmail, subject, html, text);
-      console.log(`✓ Email sent via Brevo HTTP API to ${toEmail}`);
-      return true;
-    } catch (err) {
-      console.warn(`⚠️ Brevo API send failed: ${err.message}`);
+  try {
+    const info = await transporter.sendMail({
+      from: { name: senderName, address: fromAddress },
+      to: toEmail,
+      subject,
+      text,
+      html,
+    });
+    if (!info.rejected || info.rejected.length === 0) {
+      console.log(`✓ Email sent via SMTP to ${toEmail}`);
+      return { success: true };
     }
+    return { success: false, error: 'Email was rejected by the SMTP server.' };
+  } catch (err) {
+    console.warn(`⚠️ SMTP send failed: ${err.message}`);
+    return { success: false, error: `SMTP error: ${err.message}` };
   }
-
-  console.error(`✗ All email delivery methods failed for ${toEmail}`);
-  return false;
 }
 
 // =============================================================================
@@ -247,8 +267,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: 'JH Innovation Connect Backend API',
     uptimeSeconds: Math.floor(process.uptime()),
-    smtpConfigured: hasBrevoSmtp,
-    apiConfigured: hasBrevoApi,
+    smtpConfigured: hasSmtp,
     supabaseConfigured: Boolean(supabase),
     timestamp: new Date().toISOString()
   });
@@ -265,7 +284,7 @@ app.post('/api/send-otp', otpLimiter, async (req, res) => {
     return res.status(400).json({ success: false, error: 'Valid email address is required.' });
   }
 
-  if (!hasAnyEmail) {
+  if (!hasSmtp) {
     return res.status(503).json({ success: false, error: 'Email delivery is not configured on this server.' });
   }
 
@@ -287,14 +306,14 @@ app.post('/api/send-otp', otpLimiter, async (req, res) => {
     });
 
     // Actually send the email
-    const delivered = await sendOtpEmail(cleanEmail, otp);
+    const deliveryResult = await sendOtpEmail(cleanEmail, otp);
 
-    if (!delivered) {
+    if (!deliveryResult.success) {
       // Delete the OTP since it can't be delivered
       otpStore.delete(cleanEmail);
       return res.status(502).json({
         success: false,
-        error: 'Failed to send OTP email. Please check server email configuration and try again.',
+        error: deliveryResult.error || 'Failed to send OTP email. Please check server email configuration and try again.',
       });
     }
 
@@ -415,10 +434,11 @@ const startServer = (port) => {
   });
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.warn(`⚠️ Port ${port} in use, trying ${port + 1}...`);
-      startServer(port + 1);
+      console.error(`✗ Port ${port} is already in use. Please free up the port to start the backend.`);
+      process.exit(1);
     } else {
       console.error('Server error:', err);
+      process.exit(1);
     }
   });
 };

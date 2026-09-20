@@ -4,6 +4,9 @@ import { UserRole } from '../../types';
 import { JharkhandEmblem } from '../common/JharkhandEmblem';
 import assemblyHeroImg from '../../assets/images/jharkhand_assembly_1788342750288.jpg';
 import { authService } from '../../services/authService';
+import { SignUpPage } from '../auth/SignUpPage';
+import { EmailVerificationModal } from '../auth/EmailVerificationModal';
+import { AuthUser } from '../../types/auth';
 import {
   Users,
   GraduationCap,
@@ -159,7 +162,10 @@ export const RoleSelectionPage: React.FC = () => {
   // Selected active role in the 4-way hub
   const [selectedRole, setSelectedRole] = useState<RoleCardData>(FOUR_ROLES[0]);
   const [isAuthPanelOpen, setIsAuthPanelOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'verification'>('login');
+
+  // Verification state lifted from SignUpPage so the verification card renders in the same modal slot
+  const [pendingVerificationUser, setPendingVerificationUser] = useState<AuthUser | null>(null);
 
   // Quick Login Form State inside the panel
   const [identifier, setIdentifier] = useState('');
@@ -200,10 +206,14 @@ export const RoleSelectionPage: React.FC = () => {
       setIsLoading(false);
 
       if (res.success && res.user) {
-        setCurrentUser(res.user as any);
-        showToast('success', 'Authentication Successful', res.message);
-        const target = selectedRole.targetView || (res.user.role === 'citizen' ? 'citizen-dashboard' : 'role-selection');
-        setCurrentView(target as any);
+        setIsAuthPanelOpen(false);
+        requestAnimationFrame(() => {
+          setCurrentUser(res.user as any);
+          switchRole(selectedRole.role);
+          showToast('success', 'Authentication Successful', res.message);
+          const target = selectedRole.targetView || (res.user.role === 'citizen' ? 'citizen-dashboard' : 'role-selection');
+          setCurrentView(target as any);
+        });
       } else {
         setErrorMessage(res.message);
       }
@@ -250,7 +260,7 @@ export const RoleSelectionPage: React.FC = () => {
         <div className="flex items-center gap-3 sm:gap-4">
           <button
             type="button"
-            onClick={() => setCurrentView('how-it-works')}
+            onClick={() => setCurrentView('about' as any)}
             className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 hover:text-slate-950 hover:bg-amber-100/60 rounded-xl transition-colors cursor-pointer"
           >
             <HelpCircle className="w-4 h-4 text-slate-500" />
@@ -490,7 +500,8 @@ export const RoleSelectionPage: React.FC = () => {
       {/* ========================================================================= */}
       {isAuthPanelOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+          {authMode === 'login' ? (
+          <div key="login-card" className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-300">
             {/* Modal Top Banner */}
             <div className={`p-6 text-white relative overflow-hidden bg-slate-900 border-b border-slate-800`}>
               <button
@@ -639,9 +650,8 @@ export const RoleSelectionPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setIsAuthPanelOpen(false);
+                      setAuthMode('signup');
                       switchRole(selectedRole.role);
-                      setCurrentView('signup' as any);
                     }}
                     className="text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer"
                   >
@@ -655,6 +665,53 @@ export const RoleSelectionPage: React.FC = () => {
               )}
             </div>
           </div>
+          ) : authMode === 'signup' ? (
+            <SignUpPage
+              key="signup-card"
+              initialRole={selectedRole.role}
+              onNavigateToLogin={() => setAuthMode('login')}
+              onNavigateToRoleSelection={() => setIsAuthPanelOpen(false)}
+              asInlineCard={true}
+              onVerificationRequired={(user) => {
+                setPendingVerificationUser(user);
+                setAuthMode('verification');
+              }}
+            />
+          ) : authMode === 'verification' && pendingVerificationUser ? (
+            <EmailVerificationModal
+              key="verification-card"
+              isOpen={true}
+              user={pendingVerificationUser}
+              asInlineCard={true}
+              onClose={() => {
+                setPendingVerificationUser(null);
+                setIsAuthPanelOpen(false);
+              }}
+              onBack={() => {
+                setAuthMode('signup');
+              }}
+              onVerified={() => {
+                const role = pendingVerificationUser.role;
+                setPendingVerificationUser(null);
+                setIsAuthPanelOpen(false);
+
+                requestAnimationFrame(() => {
+                  const authedUser = authService.getCurrentUser();
+                  setCurrentUser(authedUser as any);
+                  switchRole(role);
+
+                  let dashboardView = 'citizen-dashboard';
+                  if (role === 'university_admin') dashboardView = 'university-dashboard';
+                  else if (role === 'faculty_mentor') dashboardView = 'university-proposals';
+                  else if (role === 'csr_org' || role === 'industry_msme') dashboardView = 'industry-dashboard';
+                  else if (role === 'govt_department' || role === 'platform_admin') dashboardView = 'government-dashboard';
+
+                  setCurrentView(dashboardView as any);
+                  showToast('success', 'Registration Complete', `Welcome! Your ${role.replace('_', ' ')} account has been verified.`);
+                });
+              }}
+            />
+          ) : null}
         </div>
       )}
     </div>
