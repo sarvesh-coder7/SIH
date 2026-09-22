@@ -256,7 +256,7 @@ export const UniversityDashboard: React.FC = () => {
                 <div
                   key={p.id}
                   onClick={() => navigateToProject(p.id)}
-                  className="bg-white rounded-2xl p-5 border border-[#e2d6bc] shadow-xs hover:border-emerald-500 cursor-pointer transition-all space-y-3"
+                  className="bg-white rounded-2xl p-5 border border-[#e2d6bc] shadow-xs hover:border-emerald-500 cursor-pointer transition-all flex flex-col justify-between space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>

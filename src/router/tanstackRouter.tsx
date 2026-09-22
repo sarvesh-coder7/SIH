@@ -49,8 +49,14 @@ import { CitizenPrivacyPage } from '../components/citizen/CitizenPrivacyPage';
 import { UniversityLayout } from '../components/university/UniversityLayout';
 import { UniversityDashboard } from '../components/university/UniversityDashboard';
 import { UniversityChallengesPage } from '../components/university/UniversityChallengesPage';
-import { UniversityTeamsPage } from '../components/university/UniversityTeamsPage';
+import { UniversityProjectsPage } from '../components/university/UniversityProjectsPage';
 import { UniversityProposalsPage } from '../components/university/UniversityProposalsPage';
+import { UniversityCollaboratePage } from '../components/university/UniversityCollaboratePage';
+import { UniversityFundingPage } from '../components/university/UniversityFundingPage';
+import { UniversityMessagesPage } from '../components/university/UniversityMessagesPage';
+import { UniversityReportsPage } from '../components/university/UniversityReportsPage';
+import { UniversitySettingsPage } from '../components/university/UniversitySettingsPage';
+import { UniversityTeamsPage } from '../components/university/UniversityTeamsPage';
 import { UniversityNotificationsPage } from '../components/university/UniversityNotificationsPage';
 import { UniversityProfilePage } from '../components/university/UniversityProfilePage';
 import { UniversityGuidelinesPage } from '../components/university/UniversityGuidelinesPage';
@@ -329,16 +335,52 @@ const universityChallengesRoute = createRoute({
   component: UniversityChallengesPage,
 });
 
-const universityTeamsRoute = createRoute({
+const universityProjectsRoute = createRoute({
   getParentRoute: () => universityLayoutRoute,
-  path: '/dashboard/university/teams',
-  component: UniversityTeamsPage,
+  path: '/dashboard/university/projects',
+  component: UniversityProjectsPage,
 });
 
 const universityProposalsRoute = createRoute({
   getParentRoute: () => universityLayoutRoute,
   path: '/dashboard/university/proposals',
   component: UniversityProposalsPage,
+});
+
+const universityCollaborateRoute = createRoute({
+  getParentRoute: () => universityLayoutRoute,
+  path: '/dashboard/university/collaborate',
+  component: UniversityCollaboratePage,
+});
+
+const universityFundingRoute = createRoute({
+  getParentRoute: () => universityLayoutRoute,
+  path: '/dashboard/university/funding',
+  component: UniversityFundingPage,
+});
+
+const universityMessagesRoute = createRoute({
+  getParentRoute: () => universityLayoutRoute,
+  path: '/dashboard/university/messages',
+  component: UniversityMessagesPage,
+});
+
+const universityReportsRoute = createRoute({
+  getParentRoute: () => universityLayoutRoute,
+  path: '/dashboard/university/reports',
+  component: UniversityReportsPage,
+});
+
+const universitySettingsRoute = createRoute({
+  getParentRoute: () => universityLayoutRoute,
+  path: '/dashboard/university/settings',
+  component: UniversitySettingsPage,
+});
+
+const universityTeamsRoute = createRoute({
+  getParentRoute: () => universityLayoutRoute,
+  path: '/dashboard/university/teams',
+  component: UniversityTeamsPage,
 });
 
 const universityNotificationsRoute = createRoute({
@@ -423,8 +465,14 @@ const routeTree = rootRoute.addChildren([
   universityLayoutRoute.addChildren([
     universityDashboardRoute,
     universityChallengesRoute,
-    universityTeamsRoute,
+    universityProjectsRoute,
     universityProposalsRoute,
+    universityCollaborateRoute,
+    universityFundingRoute,
+    universityMessagesRoute,
+    universityReportsRoute,
+    universitySettingsRoute,
+    universityTeamsRoute,
     universityNotificationsRoute,
     universityProfileRoute,
     universityGuidelinesRoute,

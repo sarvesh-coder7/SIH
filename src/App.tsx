@@ -5,6 +5,7 @@ import { Footer } from './components/common/Footer';
 import { ToastProvider } from './context/ToastContext';
 import { AuthModal } from './components/common/AuthModal';
 import { AIChatWidget } from './components/ai/AIChatWidget';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Standalone Public & Auth Pages
 import { LandingPage } from './components/public/LandingPage';
@@ -27,16 +28,20 @@ import { CitizenPrivacyPage } from './components/citizen/CitizenPrivacyPage';
 import { UniversityLayout } from './components/university/UniversityLayout';
 import { UniversityDashboard } from './components/university/UniversityDashboard';
 import { UniversityChallengesPage } from './components/university/UniversityChallengesPage';
-import { UniversityTeamsPage } from './components/university/UniversityTeamsPage';
+import { UniversityProjectsPage } from './components/university/UniversityProjectsPage';
 import { UniversityProposalsPage } from './components/university/UniversityProposalsPage';
+import { UniversityCollaboratePage } from './components/university/UniversityCollaboratePage';
+import { UniversityFundingPage } from './components/university/UniversityFundingPage';
+import { UniversityMessagesPage } from './components/university/UniversityMessagesPage';
+import { UniversityReportsPage } from './components/university/UniversityReportsPage';
+import { UniversitySettingsPage } from './components/university/UniversitySettingsPage';
+import { UniversityTeamsPage } from './components/university/UniversityTeamsPage';
 import { UniversityNotificationsPage } from './components/university/UniversityNotificationsPage';
 import { UniversityProfilePage } from './components/university/UniversityProfilePage';
 import { UniversityGuidelinesPage } from './components/university/UniversityGuidelinesPage';
 import { UniversityApplicationsPage } from './components/university/UniversityApplicationsPage';
-import { UniversityReportsPage } from './components/university/UniversityReportsPage';
 import { UniversityIndustryPage } from './components/university/UniversityIndustryPage';
 import { UniversityHelpPage } from './components/university/UniversityHelpPage';
-import { UniversitySettingsPage } from './components/university/UniversitySettingsPage';
 
 // Student Dedicated Pages
 import { StudentDashboard } from './components/student/StudentDashboard';
@@ -173,37 +178,36 @@ const AppContent: React.FC = () => {
           return <UniversityDashboard />;
         case 'university-challenges':
           return <UniversityChallengesPage />;
-        case 'university-applications':
-          return <UniversityApplicationsPage />;
-        case 'university-teams':
-          return <UniversityTeamsPage />;
+        case 'university-projects':
+          return <UniversityProjectsPage />;
         case 'university-proposals':
           return <UniversityProposalsPage />;
-        case 'project-workspace':
-        case 'project-detail':
-        case 'university-projects':
-        case 'university-milestones':
-          return <ProjectWorkspace />;
+        case 'university-collaborate':
+        case 'university-industry':
+          return <UniversityCollaboratePage />;
+        case 'university-funding':
+          return <UniversityFundingPage />;
+        case 'university-messages':
+        case 'messages':
+          return <UniversityMessagesPage />;
         case 'university-reports':
           return <UniversityReportsPage />;
-        case 'university-industry':
-          return <UniversityIndustryPage />;
-        case 'challenge-detail':
-        case 'citizen-challenge-detail':
-          return <CitizenChallengeDetail />;
-        case 'explore-challenges':
-          return <ExploreChallengesPage />;
-        case 'university-notifications':
-        case 'student-notifications':
-          return <UniversityNotificationsPage />;
+        case 'university-settings':
+          return <UniversitySettingsPage />;
+        case 'university-teams':
+          return <UniversityTeamsPage />;
+        case 'university-applications':
+          return <UniversityApplicationsPage />;
+        case 'project-workspace':
+        case 'project-detail':
+        case 'university-milestones':
+          return <ProjectWorkspace />;
         case 'university-profile':
           return <UniversityProfilePage />;
         case 'university-guidelines':
           return <UniversityGuidelinesPage />;
         case 'university-help':
           return <UniversityHelpPage />;
-        case 'university-settings':
-          return <UniversitySettingsPage />;
         // Student Specific Views
         case 'student-dashboard':
           return <StudentDashboard />;
@@ -319,7 +323,7 @@ const AppContent: React.FC = () => {
   // 4. Dedicated Standalone Industry Experience with corporate sidebar, role switcher, and workspaces
   if (isIndustryRole) {
     return (
-      <div key="industry-portal" className="pt-portal-enter">
+      <div key="industry-portal" className="h-screen w-full overflow-hidden">
         <IndustryLayout />
         <AuthModal />
       </div>
@@ -360,12 +364,16 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AppProvider>
-        <AppContent />
-        <AIChatWidget />
-      </AppProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppProvider>
+          <ErrorBoundary>
+            <AppContent />
+            <AIChatWidget />
+          </ErrorBoundary>
+        </AppProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

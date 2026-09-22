@@ -157,7 +157,7 @@ const FOUR_ROLES: RoleCardData[] = [
 ];
 
 export const RoleSelectionPage: React.FC = () => {
-  const { switchRole, setCurrentView, showToast, setCurrentUser } = useApp();
+  const { switchRole, setCurrentView, showToast, setCurrentUser, openAuthRole, setOpenAuthRole } = useApp();
 
   // Selected active role in the 4-way hub
   const [selectedRole, setSelectedRole] = useState<RoleCardData>(FOUR_ROLES[0]);
@@ -173,6 +173,24 @@ export const RoleSelectionPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  React.useEffect(() => {
+    let targetRole: string | null = openAuthRole;
+    if (!targetRole && typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      targetRole = params.get('role') || params.get('auth');
+    }
+
+    if (targetRole) {
+      const matchedRole = FOUR_ROLES.find(
+        (r) => r.id === targetRole || r.role === targetRole
+      ) || FOUR_ROLES[0];
+      setSelectedRole(matchedRole);
+      setIsAuthPanelOpen(true);
+      setAuthMode('login');
+      if (setOpenAuthRole) setOpenAuthRole(null);
+    }
+  }, [openAuthRole, setOpenAuthRole]);
 
   const handleSelectRole = (roleItem: RoleCardData) => {
     setSelectedRole(roleItem);
@@ -211,7 +229,7 @@ export const RoleSelectionPage: React.FC = () => {
           setCurrentUser(res.user as any);
           switchRole(selectedRole.role);
           showToast('success', 'Authentication Successful', res.message);
-          const target = selectedRole.targetView || (res.user.role === 'citizen' ? 'citizen-dashboard' : 'role-selection');
+          const target = selectedRole.targetView || (res.user?.role === 'citizen' ? 'citizen-dashboard' : 'role-selection');
           setCurrentView(target as any);
         });
       } else {

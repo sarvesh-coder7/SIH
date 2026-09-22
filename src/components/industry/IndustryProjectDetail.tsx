@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { IndustryExpressInterestModal } from './IndustryExpressInterestModal';
+import { DownloadReportButton } from '../common/DownloadReportButton';
 import {
   ArrowLeft,
   Building2,
@@ -80,6 +81,9 @@ export const IndustryProjectDetail: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-3">
+          {challenge && (
+            <DownloadReportButton challenge={challenge} size="sm" />
+          )}
           {existingCollab ? (
             <div className="px-3.5 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />

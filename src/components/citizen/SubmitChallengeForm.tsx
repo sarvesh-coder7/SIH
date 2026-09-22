@@ -9,6 +9,7 @@ import {
   getCurrentGPS,
   buildLocationData,
   stampPhotoWithAddress,
+  formatCanonicalAddress,
   isGPSAcceptable,
   getAccuracyLabel,
   calculateDistance,
@@ -306,30 +307,53 @@ export const SubmitChallengeForm: React.FC = () => {
   // ── Canonical location helper ──────────────────────────────────────────────
   // Returns the single source of truth for the selected location.
   // Used by Review, validation, and submit handler — they all call this function.
+  // ── Canonical location helper ──────────────────────────────────────────────
+  // Returns the single source of truth for the selected location.
+  // Used by Review, validation, and submit handler — they all call this function.
   const getCanonicalLocation = () => {
     if (verifiedLocation) {
+      const cleanLocality = village.trim() || verifiedLocation.parsedAddress?.locality || '';
+      const cleanDistrict = district.trim() || verifiedLocation.parsedAddress?.district || 'Ranchi';
+      const cleanBlock = block.trim();
+
+      const displayAddress = formatCanonicalAddress({
+        village: cleanLocality,
+        block: cleanBlock,
+        district: cleanDistrict,
+        formattedAddress: verifiedLocation.formattedAddress,
+      });
+
       return {
         method: (locationMethod || 'gps') as 'gps' | 'manual',
-        displayAddress: verifiedLocation.formattedAddress || `${verifiedLocation.latitude.toFixed(4)}°N, ${verifiedLocation.longitude.toFixed(4)}°E`,
+        displayAddress,
         latitude: verifiedLocation.latitude,
         longitude: verifiedLocation.longitude,
         accuracy: verifiedLocation.accuracy,
-        district: district.trim() || 'Ranchi',
-        block: block.trim() || 'Ranchi Sadar',
-        village: village.trim() || 'Community Area',
+        district: cleanDistrict,
+        block: cleanBlock,
+        village: cleanLocality,
       };
     }
     if (district && district.trim()) {
-      const parts = [village.trim(), block.trim(), district.trim()].filter(Boolean);
+      const cleanDist = district.trim();
+      const cleanBlk = block.trim();
+      const cleanVil = village.trim();
+
+      const displayAddress = formatCanonicalAddress({
+        village: cleanVil,
+        block: cleanBlk,
+        district: cleanDist,
+      });
+
       return {
         method: 'manual' as const,
-        displayAddress: parts.join(', ') || district,
+        displayAddress,
         latitude: 23.3441, // Approx center for manual entry fallback
         longitude: 85.3096,
         accuracy: null,
-        district: district.trim(),
-        block: block.trim() || district.trim(),
-        village: village.trim() || 'Main Locality',
+        district: cleanDist,
+        block: cleanBlk,
+        village: cleanVil,
       };
     }
     // Return null if location is invalid/incomplete
@@ -398,10 +422,12 @@ export const SubmitChallengeForm: React.FC = () => {
 
   // Geolocation Handler — also reverse geocodes to get a human-readable address
   const handleUseCurrentLocation = async () => {
+    // Prevent concurrent rapid multi-clicks
+    if (isLocating) return;
+
     setIsLocating(true);
     setLocationError(null);
-    setLocationSuccessMsg(null);
-    setVerifiedLocation(null);
+    setLocationSuccessMsg('📍 Detecting location...');
 
     if (!navigator.geolocation) {
       setIsLocating(false);
@@ -413,45 +439,47 @@ export const SubmitChallengeForm: React.FC = () => {
       const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
       if (permissionStatus.state === 'denied') {
         setIsLocating(false);
-        setLocationError('Location permission is required to geotag this photo. Please allow location access in your browser settings.');
-        showToast('error', 'Permission Denied', 'Please allow location access in your browser settings.');
+        setLocationError('Location permission is required. Please allow location access in browser settings or enter manually.');
+        showToast('error', 'Permission Denied', 'Please allow location access in your browser settings or enter location manually.');
         return;
       }
     } catch {}
 
     try {
-      setLocationSuccessMsg('📍 Acquiring high-accuracy GPS fix...');
       const gpsData = await getCurrentGPS();
 
       if (gpsData.accuracy > 500) {
         setIsLocating(false);
-        setLocationError(`Location accuracy is too low (±${Math.round(gpsData.accuracy)}m). Please enable device GPS/location and try again.`);
+        setLocationError(`Location accuracy is too low (±${Math.round(gpsData.accuracy)}m). Please enable device GPS/location or enter manually.`);
         return;
       }
 
       setLocationSuccessMsg('📍 GPS acquired. Reverse geocoding address...');
-      const locationData = await buildLocationData(gpsData);
+      let locationData = await buildLocationData(gpsData);
       
       if (!locationData) {
-        setIsLocating(false);
-        setLocationError('Reverse geocoding failed. Unable to determine address.');
-        return;
+        // Fallback: construct raw coordinate address if reverse geocoding server returns null
+        locationData = {
+          latitude: gpsData.latitude,
+          longitude: gpsData.longitude,
+          accuracy: gpsData.accuracy,
+          capturedAt: gpsData.timestamp,
+          formattedAddress: `${gpsData.latitude.toFixed(4)}°N, ${gpsData.longitude.toFixed(4)}°E`,
+          parsedAddress: {
+            locality: null,
+            district: district || 'Ranchi',
+            state: 'Jharkhand',
+            country: 'India',
+            formatted: `${gpsData.latitude.toFixed(4)}°N, ${gpsData.longitude.toFixed(4)}°E`,
+          },
+          source: 'nominatim-osm',
+        };
       }
 
       setVerifiedLocation(locationData);
-      
-      setVerifiedLocation(locationData);
-      
+
       if (locationData.parsedAddress) {
         const parsed = locationData.parsedAddress;
-        
-        // Ensure location is inside Jharkhand
-        if (parsed.state && !parsed.state.toLowerCase().includes('jharkhand')) {
-          setIsLocating(false);
-          setLocationError(`Location is outside Jharkhand (${parsed.state}). This portal is only for issues in Jharkhand.`);
-          setVerifiedLocation(null);
-          return;
-        }
 
         if (parsed.district) {
           const matchedDistrict = JHARKHAND_DISTRICTS.find(
@@ -462,28 +490,32 @@ export const SubmitChallengeForm: React.FC = () => {
           );
           setDistrict(matchedDistrict || parsed.district.replace(/\s*district\s*/i, '').trim());
         }
-        if (parsed.locality) setVillage(parsed.locality);
+
+        if (parsed.locality) {
+          const normLoc = parsed.locality.toLowerCase().replace(/\s+district\s*$/i, '').trim();
+          const normDist = (parsed.district || '').toLowerCase().replace(/\s+district\s*$/i, '').trim();
+          if (normLoc !== normDist) {
+            setVillage(parsed.locality);
+          } else {
+            setVillage(''); // Avoid setting village identical to district name
+          }
+        }
       }
 
-      const addr = locationData.formattedAddress;
-      const parts = addr.split(',').map((p) => p.trim());
-      if (parts.length > 2) setBlock((prev) => prev || parts[1]);
-      else if (parts.length > 1) setBlock((prev) => prev || parts[0]);
-      if (parts.length > 0) setVillage((prev) => prev || parts[0]);
-
       if (gpsData.accuracy <= 100) {
-        setLocationSuccessMsg(`✓ Location verified (${gpsData.latitude.toFixed(6)}, ${gpsData.longitude.toFixed(6)}) ±${Math.round(gpsData.accuracy)}m`);
+        setLocationSuccessMsg(`✓ Location detected (${gpsData.latitude.toFixed(4)}°, ${gpsData.longitude.toFixed(4)}°) ±${Math.round(gpsData.accuracy)}m`);
       } else {
-        setLocationSuccessMsg(`⚠ Location detected with limited accuracy (${gpsData.latitude.toFixed(6)}, ${gpsData.longitude.toFixed(6)}) ±${Math.round(gpsData.accuracy)}m`);
+        setLocationSuccessMsg(`⚠ Location detected (${gpsData.latitude.toFixed(4)}°, ${gpsData.longitude.toFixed(4)}°) ±${Math.round(gpsData.accuracy)}m`);
       }
 
       setLocationMethod('gps');
       setIsLocating(false);
-      showToast('success', 'Location Captured', 'GPS coordinates identified via your device.');
+      showToast('success', 'Location Detected', 'GPS location captured cleanly.');
     } catch (error: any) {
       setIsLocating(false);
-      setLocationError(error.message || error || 'GPS location unavailable. You can enter the location manually below.');
-      showToast('info', 'GPS Unavailable', 'You can select your District, Block, and Village manually.');
+      const errMsg = error?.message || error || 'Unable to detect location. Please try again or enter the location manually.';
+      setLocationError(errMsg);
+      showToast('info', 'Location Notice', 'Unable to detect location automatically. You can enter location details manually below.');
     }
   };
 
@@ -502,6 +534,12 @@ export const SubmitChallengeForm: React.FC = () => {
     setPhotoLocationData(null);
     setPhotoGpsError(null);
     originalCaptureRef.current = null;
+
+    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+      showToast('info', 'Camera Fallback', 'Camera access requires HTTPS. Falling back to device camera/gallery.');
+      photoInputRef.current?.click();
+      return;
+    }
 
     setIsCameraOpen(true);
     setCameraError(null);
@@ -670,6 +708,12 @@ export const SubmitChallengeForm: React.FC = () => {
 
   // Video Camera Handlers
   const handleOpenVideoCamera = async () => {
+    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+      showToast('info', 'Video Fallback', 'Video recording requires HTTPS. Falling back to device camera/gallery.');
+      videoCaptureRef.current?.click();
+      return;
+    }
+
     setIsVideoRecordOpen(true);
     setCameraError(null);
     setRecordingTime(0);
@@ -921,7 +965,7 @@ export const SubmitChallengeForm: React.FC = () => {
       setDistrict('');
       setBlock('');
       setVillage('');
-      setGps(null);
+      setVerifiedLocation(null);
       setLocationMethod(null);
       setAffectedPeopleCount('');
 
@@ -1419,7 +1463,7 @@ export const SubmitChallengeForm: React.FC = () => {
             )}
 
             {/* ── GPS selected: show OSM map + address + coordinates ── */}
-            {locationMethod === 'gps' && gps && (
+            {locationMethod === 'gps' && verifiedLocation && (
               <div className="rounded-xl overflow-hidden border border-emerald-200 shadow-sm">
                 {/* OSM iframe — no API key, no Google popup */}
                 <div className="relative h-[300px] sm:h-[380px] w-full bg-slate-100">
@@ -1429,7 +1473,7 @@ export const SubmitChallengeForm: React.FC = () => {
                     height="100%"
                     loading="lazy"
                     style={{ border: 0 }}
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${gps.lng - 0.01},${gps.lat - 0.01},${gps.lng + 0.01},${gps.lat + 0.01}&layer=mapnik&marker=${gps.lat},${gps.lng}`}
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${verifiedLocation.longitude - 0.01},${verifiedLocation.latitude - 0.01},${verifiedLocation.longitude + 0.01},${verifiedLocation.latitude + 0.01}&layer=mapnik&marker=${verifiedLocation.latitude},${verifiedLocation.longitude}`}
                   />
                 </div>
 
@@ -1440,16 +1484,16 @@ export const SubmitChallengeForm: React.FC = () => {
                     <span>✓ Location detected automatically</span>
                   </div>
 
-                  {gpsFormattedAddress && (
+                  {verifiedLocation.formattedAddress && (
                     <div className="flex items-start gap-1.5 text-xs text-emerald-800 font-medium">
                       <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5 text-emerald-600" />
-                      <span>{gpsFormattedAddress}</span>
+                      <span>{verifiedLocation.formattedAddress}</span>
                     </div>
                   )}
 
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-mono text-emerald-900">
-                    <span>GPS Coordinates: {gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}</span>
-                    {geoAccuracy && <span>Accuracy: ±{geoAccuracy} m</span>}
+                    <span>GPS Coordinates: {verifiedLocation.latitude.toFixed(6)}, {verifiedLocation.longitude.toFixed(6)}</span>
+                    {verifiedLocation.accuracy != null && <span>Accuracy: ±{Math.round(verifiedLocation.accuracy)} m</span>}
                   </div>
                 </div>
               </div>

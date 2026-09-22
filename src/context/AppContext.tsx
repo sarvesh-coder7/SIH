@@ -3,6 +3,7 @@ import {
   User,
   UserRole,
   Challenge,
+  LifecycleStage,
   ProjectLifecycle,
   NotificationItem,
   IndustryOrganization,
@@ -66,6 +67,9 @@ export type AppView =
   | 'university-applications'
   | 'university-teams'
   | 'university-proposals'
+  | 'university-collaborate'
+  | 'university-funding'
+  | 'university-messages'
   | 'university-reports'
   | 'university-industry'
   | 'university-milestones'
@@ -227,7 +231,9 @@ interface AppContextType {
   currentRole: UserRole;
   switchRole: (role: UserRole) => void;
   currentView: AppView;
-  setCurrentView: (view: AppView, params?: { challengeId?: string; projectId?: string }) => void;
+  setCurrentView: (view: AppView, params?: { challengeId?: string; projectId?: string; openAuthRole?: 'citizen' | 'university' | 'industry' | 'government' }) => void;
+  openAuthRole: 'citizen' | 'university' | 'industry' | 'government' | null;
+  setOpenAuthRole: (role: 'citizen' | 'university' | 'industry' | 'government' | null) => void;
   goBack: (fallbackView?: AppView) => void;
   selectedChallengeId: string | null;
   setSelectedChallengeId: (id: string | null) => void;
@@ -371,6 +377,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [currentDemoStep, setCurrentDemoStep] = useState<number>(1);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isEcosystemModalOpen, setIsEcosystemModalOpen] = useState<boolean>(false);
+  const [openAuthRole, setOpenAuthRole] = useState<'citizen' | 'university' | 'industry' | 'government' | null>(null);
 
   // Restore the real Supabase Auth session on refresh and reactively listen for auth state changes
   useEffect(() => {
@@ -444,18 +451,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   // Smooth and synchronous view navigation
-  const setCurrentView = (view: AppView, params?: { challengeId?: string; projectId?: string }) => {
+  const setCurrentView = (
+    view: AppView,
+    params?: { challengeId?: string; projectId?: string; openAuthRole?: 'citizen' | 'university' | 'industry' | 'government' }
+  ) => {
     setCurrentViewState(view);
     setViewHistory((prev) => (prev[prev.length - 1] === view ? prev : [...prev, view]));
     if (params?.challengeId) setSelectedChallengeId(params.challengeId);
     if (params?.projectId) setSelectedProjectId(params.projectId);
+    if (params?.openAuthRole !== undefined) setOpenAuthRole(params.openAuthRole);
 
-    const path = getViewRoutePath(view, {
+    let path = getViewRoutePath(view, {
       challengeId: params?.challengeId || (view === 'challenge-detail' ? selectedChallengeId || undefined : undefined),
       projectId: params?.projectId || ((view === 'project-workspace' || view === 'project-detail') ? selectedProjectId || undefined : undefined),
     });
 
-    if (typeof window !== 'undefined' && window.location.pathname !== path) {
+    if (params?.openAuthRole) {
+      path += `?role=${params.openAuthRole}`;
+    }
+
+    if (typeof window !== 'undefined' && (window.location.pathname + window.location.search) !== path) {
       window.history.pushState({ view, params }, '', path);
     }
   };
@@ -1078,11 +1093,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       hour12: true,
     });
 
+    const govName = currentGovernmentMember?.name || 'State Nodal Authority';
+    const govDesignation = currentGovernmentMember?.designation || 'Special Secretary';
+    const govDept = currentGovernmentMember?.department_name || 'DHTE Govt of Jharkhand';
+
     const newTimelineEntry = {
       stage: decision === 'VERIFIED' ? 'Approved as Open Problem Statement' : `Verification Action: ${decision}`,
       date: formattedDateTime,
-      description: `${decision === 'VERIFIED' ? 'Officially vetted and verified by' : 'Reviewed by'} ${currentGovernmentMember.name} (${currentGovernmentMember.designation}, ${currentGovernmentMember.department_name}). ${decision === 'VERIFIED' ? 'Accepted into Open Problem Statements for University & Industry solutions.' : ''} Reason: ${reason}${notes ? ` | Notes: ${notes}` : ''}`,
-      actor: currentGovernmentMember.name,
+      description: `${decision === 'VERIFIED' ? 'Officially vetted and verified by' : 'Reviewed by'} ${govName} (${govDesignation}, ${govDept}). ${decision === 'VERIFIED' ? 'Accepted into Open Problem Statements for University & Industry solutions.' : ''} Reason: ${reason}${notes ? ` | Notes: ${notes}` : ''}`,
+      actor: govName,
     };
 
     // Persist to Supabase FIRST so database is the source of truth
@@ -1091,26 +1110,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       openForSolutions: decision === 'VERIFIED' ? true : undefined,
       currentStage: decision === 'VERIFIED' ? 'Approved as Open Problem Statement' : `Verification Action: ${decision}`,
       notes: reason + (notes ? ` | Notes: ${notes}` : ''),
-      actorName: currentGovernmentMember.name,
+      actorName: govName,
     });
 
     if (!updated) {
       throw new Error("Failed to verify challenge in database.");
     }
 
-    // Only update local state if DB update succeeds
+    // Update local state cleanly
     setChallenges((prev) =>
       prev.map((ch) => {
         if (ch.id === targetChallenge.id || (ch.trackingId && ch.trackingId === targetChallenge.trackingId)) {
           return {
             ...ch,
-            ...updated, // overlay the verified DB fields
-            timeline: [...ch.timeline, newTimelineEntry],
+            ...(updated || {}),
+            status: newStatus,
+            trustStatus: newTrustStatus,
+            currentStage: (decision === 'VERIFIED' ? 'Validation & Screening' : (ch.currentStage || 'Validation & Screening')) as LifecycleStage,
+            openForSolutions: decision === 'VERIFIED' ? true : ch.openForSolutions,
+            timeline: [...(ch.timeline || []), newTimelineEntry],
             additionalInformation:
               requiredInfo && requiredInfo.length > 0
                 ? `${ch.additionalInformation || ''}\n[Government Request for Additional Information]: ${requiredInfo.join(', ')}. Details: ${reason}`
                 : ch.additionalInformation,
-          };
+          } as Challenge;
         }
         return ch;
       })
@@ -1119,28 +1142,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const auditItem: ActivityLogItem = {
       id: `act-${Date.now()}`,
       timestamp,
-      actor: currentGovernmentMember.name,
-      role: currentGovernmentMember.designation,
-      department: currentGovernmentMember.department_name,
+      actor: govName,
+      role: govDesignation,
+      department: govDept,
       action: decision === 'VERIFIED' ? 'Officially Verified Challenge' : `Verification Action: ${decision}`,
       details: `${decision} for Challenge #${targetChallenge.trackingId || targetChallenge.id} ("${targetChallenge.title}"). Reason: ${reason}`,
       targetType: 'Challenge',
       targetId: targetChallenge.id,
     };
-    setActivityLogs((prev) => [auditItem, ...prev]);
+    setActivityLogs((prev) => [auditItem, ...(prev || [])]);
 
     const newNotif: NotificationItem = {
       id: `notif-${Date.now()}`,
-      userId: targetChallenge.submittedBy.userId,
+      userId: targetChallenge.submittedBy?.userId || 'citizen-user',
       type: 'Challenge',
       title: decision === 'VERIFIED' ? 'Challenge Officially Verified' : `Government Verification Update: ${decision}`,
-      message: `Your challenge #${targetChallenge.trackingId || targetChallenge.id} was reviewed by ${currentGovernmentMember.department_name}. ${reason}`,
+      message: `Your challenge #${targetChallenge.trackingId || targetChallenge.id} was reviewed by ${govDept}. ${reason}`,
       read: false,
       timestamp: 'Just now',
       actionUrl: 'citizen-my-challenges',
       relatedId: targetChallenge.id,
     };
-    setNotifications((prev) => [newNotif, ...prev]);
+    setNotifications((prev) => [newNotif, ...(prev || [])]);
 
     showToast(
       decision === 'VERIFIED' ? 'success' : 'info',
@@ -1707,6 +1730,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         switchRole,
         currentView,
         setCurrentView,
+        openAuthRole,
+        setOpenAuthRole,
         goBack,
         selectedChallengeId,
         setSelectedChallengeId,

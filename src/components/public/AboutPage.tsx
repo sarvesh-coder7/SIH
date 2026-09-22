@@ -31,7 +31,7 @@ export const AboutPage: React.FC = () => {
             Back
           </button>
           <button
-            onClick={() => setCurrentView('login')}
+            onClick={() => setCurrentView('role-selection', { openAuthRole: 'citizen' })}
             className="hidden sm:flex items-center gap-1.5 text-sm font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-4 py-2 rounded-xl transition-colors"
           >
             + Report a Problem
@@ -302,7 +302,7 @@ export const AboutPage: React.FC = () => {
       <div className="mt-10 mb-20 text-center flex flex-col items-center">
         <h3 className="text-lg font-bold text-slate-900 mb-4">Have a problem that needs a solution?</h3>
         <button
-          onClick={() => setCurrentView('login')}
+          onClick={() => setCurrentView('role-selection', { openAuthRole: 'citizen' })}
           className="px-6 py-3 bg-[#0d5c3a] hover:bg-[#0a472d] text-white rounded-xl font-bold shadow-lg transition-transform hover:-translate-y-0.5 flex items-center gap-2"
         >
           Report a Problem

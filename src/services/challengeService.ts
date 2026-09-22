@@ -449,14 +449,19 @@ class ChallengeService {
             actor: 'AI Problem Triage Engine',
           }
         ],
-        evidence: (input.evidenceUrls || []).map((url, i) => ({
+        evidence: (input.evidenceUrls || []).map((ev: any, i) => ({
           id: `ev-${Date.now()}-${i}`,
-          type: 'image',
-          url,
-          caption: 'Evidence',
-          timestamp: new Date().toISOString(),
-          isGeotagged: false,
-          source: 'upload',
+          type: ev.type || 'image',
+          url: typeof ev === 'string' ? ev : (ev.url || ''),
+          caption: ev.caption || 'Evidence',
+          timestamp: ev.timestamp || new Date().toISOString(),
+          gpsCoordinates: ev.gpsCoordinates,
+          geotagLocation: ev.geotagLocation,
+          accuracy: ev.accuracy,
+          isGeotagged: ev.isGeotagged || false,
+          source: ev.source || 'upload',
+          fileName: ev.fileName,
+          fileSize: ev.fileSize,
         })),
         tags: [input.category, input.district || 'Jharkhand', 'Crowdsourced'],
         openForSolutions: false,
@@ -678,9 +683,18 @@ class ChallengeService {
       .select('*')
       .maybeSingle();
 
-    if (error) {
-      console.warn('Could not update challenge in Supabase:', error.message);
-      throw new Error(error.message);
+    if (error || !data) {
+      console.warn('[challengeService] Primary update by ID failed or returned empty:', error?.message || 'No row matched ID');
+      const { data: altData } = await supabase
+        .from('challenges')
+        .update(patch)
+        .eq('tracking_id', id)
+        .select('*')
+        .maybeSingle();
+
+      if (altData) {
+        return this.hydrate(altData);
+      }
     }
 
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetDbId)) {

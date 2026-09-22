@@ -40,6 +40,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { MultimediaEvidence, Challenge } from '../../types';
+import { DownloadReportButton } from '../common/DownloadReportButton';
 
 export const CitizenChallengeDetail: React.FC = () => {
   const {
@@ -455,6 +456,11 @@ export const CitizenChallengeDetail: React.FC = () => {
     },
   ] : []);
 
+  // Show download button when verified or past submitted stage
+  const canDownloadReport =
+    challenge.trustStatus === 'Verified' ||
+    (challenge.status !== 'Submitted' && challenge.status !== 'Under Review');
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 font-sans-body">
       {/* Top Breadcrumb */}
@@ -469,6 +475,10 @@ export const CitizenChallengeDetail: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-2">
+          {canDownloadReport && (
+            <DownloadReportButton challenge={challenge} size="sm" />
+          )}
+
           <button
             type="button"
             onClick={handleFollow}

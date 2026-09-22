@@ -37,6 +37,7 @@ import {
   Handshake,
   FileCheck,
   Share2,
+  MessageSquare,
 } from 'lucide-react';
 
 interface AcademicNotif {
@@ -169,7 +170,11 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
 
   // Incoming challenges for badge count (only government-approved open problem statements)
   const incomingChallengesCount = challenges.filter(
-    (c) => c.status === 'University Matching' || c.status === 'Validated'
+    (c) =>
+      c.status === 'University Matching' ||
+      c.status === 'Validated' ||
+      c.trustStatus === 'Verified' ||
+      c.openForSolutions === true
   ).length;
 
   const isStudent = currentUser.role === 'student';
@@ -186,71 +191,55 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
         },
         {
           id: 'university-challenges' as const,
-          label: 'Challenge Discovery',
+          label: 'Verified Challenges',
           icon: Search,
           badge: incomingChallengesCount > 0 ? `${incomingChallengesCount} Open` : undefined,
           badgeColor: 'bg-amber-500 text-slate-950',
         },
         {
-          id: 'university-applications' as const,
-          label: 'My Applications',
-          icon: FileText,
-          badge: 'Under Review',
-          badgeColor: 'bg-blue-100 text-blue-800',
-        },
-        {
           id: 'university-projects' as const,
-          label: 'Active Projects',
+          label: 'My Projects',
           icon: Rocket,
           badge: `${projects.length} Active`,
           badgeColor: 'bg-emerald-600 text-white',
         },
         {
-          id: 'university-teams' as const,
-          label: 'Team & Members',
-          icon: Users,
-          badge: undefined,
+          id: 'university-proposals' as const,
+          label: 'Project Proposals',
+          icon: FileText,
+          badge: 'Formulator',
+          badgeColor: 'bg-blue-100 text-blue-800',
+        },
+        {
+          id: 'university-collaborate' as const,
+          label: 'Collaborate & Partner',
+          icon: Handshake,
+          badge: 'MoU & CSR',
+          badgeColor: 'bg-amber-100 text-amber-900',
+        },
+        {
+          id: 'university-funding' as const,
+          label: 'Funding Opportunities',
+          icon: DollarSign,
+          badge: '₹42.5L',
+          badgeColor: 'bg-teal-100 text-teal-900',
+        },
+        {
+          id: 'university-messages' as const,
+          label: 'Messages',
+          icon: MessageSquare,
+          badge: unreadCount > 0 ? `${unreadCount}` : undefined,
+          badgeColor: 'bg-indigo-600 text-white',
         },
         {
           id: 'university-reports' as const,
-          label: 'Reports & Documents',
+          label: 'Reports & Analytics',
           icon: FileCheck,
           badge: undefined,
         },
         {
-          id: 'university-industry' as const,
-          label: 'Industry Collaboration',
-          icon: Handshake,
-          badge: 'Co-funding',
-          badgeColor: 'bg-amber-100 text-amber-900',
-        },
-        {
-          id: 'university-profile' as const,
-          label: 'University Profile',
-          icon: Building2,
-          badge: undefined,
-        },
-        {
-          id: 'university-notifications' as const,
-          label: 'Notifications',
-          icon: Bell,
-          badge: unreadCount > 0 ? `${unreadCount}` : undefined,
-          badgeColor: 'bg-rose-500 text-white',
-        },
-      ],
-    },
-    {
-      group: 'Support & Settings',
-      items: [
-        {
-          id: 'university-help' as const,
-          label: 'Help & Support',
-          icon: HelpCircle,
-          badge: undefined,
-        },
-        {
           id: 'university-settings' as const,
-          label: 'Settings',
+          label: 'Profile & Settings',
           icon: Settings,
           badge: undefined,
         },
@@ -326,8 +315,12 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
 
   const isCurrentActive = (viewId: string) => {
     if (viewId === currentView) return true;
-    if (viewId === 'project-workspace' && currentView === 'project-detail') return true;
-    if (viewId === 'university-challenges' && currentView === 'challenge-detail') return true;
+    if (viewId === 'university-projects' && (currentView === 'project-workspace' || currentView === 'project-detail' || currentView === 'university-milestones')) return true;
+    if (viewId === 'university-challenges' && (currentView === 'challenge-detail' || currentView === 'citizen-challenge-detail')) return true;
+    if (viewId === 'university-collaborate' && (currentView === 'university-industry' || currentView === 'university-teams')) return true;
+    if (viewId === 'university-settings' && currentView === 'university-profile') return true;
+    if (viewId === 'university-messages' && currentView === 'messages') return true;
+    if (viewId === 'student-projects' && (currentView === 'project-workspace' || currentView === 'project-detail')) return true;
     return false;
   };
 
@@ -336,14 +329,14 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
 
 
       {/* Top Institutional Header */}
-      <header className="sticky top-0 z-30 w-full bg-slate-900 text-white border-b border-indigo-500/20 shadow-md">
+      <header className="sticky top-0 z-30 w-full bg-white/95 backdrop-blur-md text-slate-900 border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg cursor-pointer shrink-0"
+              className="lg:hidden p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg cursor-pointer shrink-0"
               aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -353,17 +346,17 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
               onClick={() => setCurrentView('university-dashboard')}
               className="flex items-center gap-3 cursor-pointer group"
             >
-              <JharkhandEmblem size={38} className="ring-1 ring-indigo-400/40 shadow-xs" />
+              <JharkhandEmblem size={38} className="ring-1 ring-slate-200 shadow-xs" />
               <div className="flex flex-col justify-center">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm sm:text-base text-white tracking-tight group-hover:text-indigo-300 transition-colors whitespace-nowrap">
+                  <span className="font-bold text-sm sm:text-base text-slate-900 tracking-tight group-hover:text-indigo-600 transition-colors whitespace-nowrap">
                     JH INNOVATION CONNECT
                   </span>
-                  <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider whitespace-nowrap">
+                  <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider whitespace-nowrap">
                     University / HEI Portal
                   </span>
                 </div>
-                <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block mt-0.5 whitespace-nowrap">
+                <p className="text-[10px] sm:text-xs text-slate-500 hidden sm:block mt-0.5 whitespace-nowrap">
                   Govt. of Jharkhand &bull; Higher Education & R&D Cell
                 </p>
               </div>
@@ -376,7 +369,7 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
             <button
               type="button"
               onClick={() => setCurrentView('university-teams')}
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer transform hover:-translate-y-0.5"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer transform hover:-translate-y-0.5"
             >
               <Users className="w-3.5 h-3.5" />
               <span>+ Assemble Team</span>
@@ -386,7 +379,7 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
             <button
               type="button"
               onClick={() => setCurrentView('university-proposals')}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer transform hover:-translate-y-0.5"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer transform hover:-translate-y-0.5"
             >
               <FileText className="w-3.5 h-3.5" />
               <span>+ New Proposal</span>
@@ -399,8 +392,8 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
                 onClick={() => setIsNotifDropdownOpen((prev) => !prev)}
                 className={`relative p-2 rounded-xl border transition-all cursor-pointer ${
                   isNotifDropdownOpen || currentView === 'university-notifications'
-                    ? 'bg-indigo-950 border-indigo-400 text-indigo-300 shadow-sm ring-2 ring-indigo-500/30'
-                    : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700 shadow-xs ring-2 ring-indigo-500/20'
+                    : 'bg-slate-100 hover:bg-slate-200/80 border-slate-200 text-slate-600 hover:text-slate-900'
                 }`}
                 title="Academic & R&D Notifications"
                 aria-expanded={isNotifDropdownOpen}
@@ -420,7 +413,7 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
                   {/* Top Dropdown Header */}
                   <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-indigo-600/60 flex items-center justify-center text-amber-300">
+                      <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
                         <Bell className="w-3.5 h-3.5" />
                       </div>
                       <div>
@@ -598,18 +591,18 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
               onClick={() => setCurrentView('university-profile')}
               className={`flex items-center gap-2.5 p-1.5 pr-3 rounded-xl border transition-all cursor-pointer ${
                 currentView === 'university-profile'
-                  ? 'bg-indigo-950 border-indigo-400 text-white'
-                  : 'bg-slate-800/90 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  ? 'bg-indigo-50 border-indigo-300 text-slate-900 shadow-xs ring-2 ring-indigo-500/20'
+                  : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 hover:text-slate-900 shadow-2xs'
               }`}
             >
-              <div className="w-7 h-7 rounded-lg bg-indigo-600 text-amber-300 font-bold text-xs flex items-center justify-center shadow-xs">
+              <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                 <GraduationCap className="w-4 h-4" />
               </div>
               <div className="text-left hidden sm:block whitespace-nowrap">
-                <span className="text-xs font-bold text-white block leading-tight truncate max-w-[140px]">
+                <span className="text-xs font-bold text-slate-900 block leading-tight truncate max-w-[140px]">
                   {currentUser.organization || 'BIT Mesra (Ranchi)'}
                 </span>
-                <span className="text-[10px] text-indigo-300 block leading-tight">
+                <span className="text-[10px] text-indigo-600 font-medium block leading-tight">
                   {currentUser.role === 'university_admin' ? 'HEI Admin' : currentUser.name}
                 </span>
               </div>
@@ -619,9 +612,9 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
       </header>
 
       {/* Body with Desktop Sidebar + Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6 lg:gap-8">
-        {/* Desktop Sidebar (Left Navigation) */}
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-5">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6 lg:gap-8 items-start">
+        {/* Desktop Sidebar (Fixed / Sticky Left Navigation) */}
+        <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-4 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
           {/* Main University Navigation */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-3 shadow-2xs space-y-4">
             {navItems.map((group, gIdx) => (

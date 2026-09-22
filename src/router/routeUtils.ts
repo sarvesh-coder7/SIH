@@ -25,16 +25,19 @@ export const VIEW_ROUTE_MAP: Record<string, string> = {
 
   // University
   'university-dashboard': '/dashboard/university',
-  'university-projects': '/dashboard/university/projects',
   'university-challenges': '/dashboard/university/challenges',
-  'university-teams': '/dashboard/university/teams',
+  'university-projects': '/dashboard/university/projects',
   'university-proposals': '/dashboard/university/proposals',
+  'university-collaborate': '/dashboard/university/collaborate',
+  'university-funding': '/dashboard/university/funding',
+  'university-messages': '/dashboard/university/messages',
+  'university-teams': '/dashboard/university/teams',
   'university-notifications': '/dashboard/university/notifications',
   'university-profile': '/dashboard/university/profile',
   'university-guidelines': '/dashboard/university/guidelines',
   'university-applications': '/dashboard/university/applications',
   'university-reports': '/dashboard/university/reports',
-  'university-industry': '/dashboard/university/industry',
+  'university-industry': '/dashboard/university/collaborate',
   'university-help': '/dashboard/university/help',
   'university-settings': '/dashboard/university/settings',
 
@@ -102,6 +105,7 @@ ROUTE_VIEW_MAP['/landing'] = 'landing';
 ROUTE_VIEW_MAP['/role_selection'] = 'role-selection';
 ROUTE_VIEW_MAP['/citizen-dashboard'] = 'citizen-dashboard';
 ROUTE_VIEW_MAP['/university-dashboard'] = 'university-dashboard';
+ROUTE_VIEW_MAP['/dashboard/university/industry'] = 'university-collaborate';
 ROUTE_VIEW_MAP['/industry-dashboard'] = 'industry-dashboard';
 ROUTE_VIEW_MAP['/government-dashboard'] = 'government-dashboard';
 ROUTE_VIEW_MAP['/student-dashboard'] = 'student-dashboard';

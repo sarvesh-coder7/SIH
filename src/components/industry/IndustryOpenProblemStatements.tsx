@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Challenge, ChallengeCategory, ChallengeUrgency } from '../../types';
+import { DownloadReportButton } from '../common/DownloadReportButton';
 import {
   Sparkles,
   Search,
@@ -473,15 +474,19 @@ export const IndustryOpenProblemStatements: React.FC = () => {
               </div>
 
               {/* Card Footer Actions */}
-              <div className="p-4 bg-[#fbf8ee] border-t border-[#e2d6bc] flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDetailModalChallenge(ch)}
-                  className="px-3 py-2 bg-white hover:bg-[#fbf8ee] text-slate-700 font-semibold text-xs rounded-xl border border-[#e2d6bc] transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Ground Evidence</span>
-                </button>
+              <div className="p-4 bg-[#fbf8ee] border-t border-[#e2d6bc] flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDetailModalChallenge(ch)}
+                    className="px-3 py-2 bg-white hover:bg-[#fbf8ee] text-slate-700 font-semibold text-xs rounded-xl border border-[#e2d6bc] transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Ground Evidence</span>
+                  </button>
+
+                  <DownloadReportButton challenge={ch} size="sm" />
+                </div>
 
                 <button
                   type="button"
@@ -896,7 +901,9 @@ export const IndustryOpenProblemStatements: React.FC = () => {
               )}
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-200">
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+              <DownloadReportButton challenge={detailModalChallenge} size="sm" />
+
               <button
                 type="button"
                 onClick={() => {

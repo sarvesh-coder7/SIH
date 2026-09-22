@@ -59,52 +59,46 @@
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
 .pt-page-enter {
-  animation: pt-page-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: opacity, transform;
+  animation: pt-page-enter 350ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* ── 2. Portal-Level Enter: used when switching between top-level portal layouts ── */
 @keyframes pt-portal-enter {
   0% {
     opacity: 0;
-    transform: translateY(18px) scale(0.98);
-    filter: blur(4px);
-  }
-  50% {
-    filter: blur(0px);
+    transform: translateY(14px);
+    filter: blur(2px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0px);
+    transform: none;
+    filter: none;
   }
 }
 
 .pt-portal-enter {
-  animation: pt-portal-enter 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: opacity, transform, filter;
+  animation: pt-portal-enter 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ── 3. Sidebar Slide-In: for sidebar itself appearing ── */
 @keyframes pt-slide-in-left {
   0% {
     opacity: 0;
-    transform: translateX(-20px);
+    transform: translateX(-16px);
   }
   100% {
     opacity: 1;
-    transform: translateX(0);
+    transform: none;
   }
 }
 
 .pt-sidebar-enter {
-  animation: pt-slide-in-left 350ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: opacity, transform;
+  animation: pt-slide-in-left 300ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* ── 4. Card / Section Stagger: for items inside a page appearing one by one ── */

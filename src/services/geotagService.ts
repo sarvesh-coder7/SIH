@@ -58,6 +58,91 @@ export interface LocationData {
   source: 'nominatim-osm';
 }
 
+/**
+ * Validates that GPS coordinates are within legal Earth boundaries:
+ * Latitude: -90 to 90
+ * Longitude: -180 to 180
+ */
+export function isValidCoordinate(latitude: number, longitude: number): boolean {
+  return (
+    typeof latitude === 'number' &&
+    typeof longitude === 'number' &&
+    !isNaN(latitude) &&
+    !isNaN(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180 &&
+    !(latitude === 0 && longitude === 0)
+  );
+}
+
+/**
+ * Takes location object or individual component strings (village, block, district, state, country)
+ * and returns a clean, deduplicated location string.
+ * Prevents output like "Tiruppur, Tiruppur, Tiruppur, Tamil Nadu".
+ */
+export function formatCanonicalAddress(location: {
+  village?: string;
+  block?: string;
+  district?: string;
+  state?: string;
+  country?: string;
+  formattedAddress?: string;
+}): string {
+  const parts: string[] = [];
+  const seenNorms = new Set<string>();
+
+  const addPart = (val?: string) => {
+    if (!val || !val.trim()) return;
+    const trimmed = val.trim();
+    const norm = trimmed
+      .toLowerCase()
+      .replace(/\s+district\s*$/i, '')
+      .replace(/\s+block\s*$/i, '')
+      .replace(/\s+county\s*$/i, '')
+      .replace(/\s+taluk\s*$/i, '')
+      .replace(/\s+subdivision\s*$/i, '')
+      .trim();
+
+    if (norm.length > 0 && !seenNorms.has(norm)) {
+      seenNorms.add(norm);
+      parts.push(trimmed);
+    }
+  };
+
+  addPart(location.village);
+  addPart(location.block);
+  addPart(location.district);
+  addPart(location.state);
+  addPart(location.country);
+
+  if (parts.length > 0) {
+    return parts.join(', ');
+  }
+
+  if (location.formattedAddress) {
+    const rawTokens = location.formattedAddress.split(',').map((s) => s.trim());
+    const dedupedTokens: string[] = [];
+    const seenTokenNorms = new Set<string>();
+
+    for (const token of rawTokens) {
+      if (!token) continue;
+      const norm = token
+        .toLowerCase()
+        .replace(/\s+district\s*$/i, '')
+        .trim();
+      if (!seenTokenNorms.has(norm)) {
+        seenTokenNorms.add(norm);
+        dedupedTokens.push(token);
+      }
+    }
+    return dedupedTokens.join(', ');
+  }
+
+  return 'Location Specified';
+}
+
 // ============================================================
 // GPS CAPTURE
 // ============================================================
@@ -79,6 +164,11 @@ export function getCurrentGPS(): Promise<GPSData> {
         let finalLat = position.coords.latitude;
         let finalLng = position.coords.longitude;
         let finalAcc = position.coords.accuracy;
+
+        if (!isValidCoordinate(finalLat, finalLng)) {
+          reject('Invalid GPS coordinates received from device.');
+          return;
+        }
 
         resolve({
           latitude: finalLat,
@@ -129,12 +219,16 @@ export async function reverseGeocode(
   latitude: number,
   longitude: number
 ): Promise<NominatimResponse | null> {
+  if (!isValidCoordinate(latitude, longitude)) {
+    console.warn('[geotagService] Invalid coordinates provided to reverseGeocode:', latitude, longitude);
+    return null;
+  }
+
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1&accept-language=en`;
 
     const response = await fetch(url, {
       headers: {
-        // Required by Nominatim usage policy: identify your application
         'User-Agent': 'SIH2026-CitizenApp/1.0 (contact@sih2026.gov.in)',
         'Accept-Language': 'en',
       },
@@ -165,25 +259,18 @@ function normalizeForDedup(value: string): string {
   return value
     .trim()
     .toLowerCase()
-    .replace(/\s+district\s*$/i, '')  // strip trailing "district"
+    .replace(/\s+district\s*$/i, '')
+    .replace(/\s+county\s*$/i, '')
     .replace(/\s+/g, ' ');
 }
 
 /**
  * Parses the Nominatim response into a structured, deduplicated address.
- *
- * Priority order for locality:
- *   village → town → city → municipality → suburb → neighbourhood
- *
- * Priority order for district:
- *   district → county → state_district
- *
  * Never invents or fills in missing values.
  */
 export function parseNominatimAddress(response: NominatimResponse): ParsedAddress {
   const addr = response.address || {};
 
-  // --- Pick locality (most specific settlement name) ---
   const rawLocality =
     addr.village ||
     addr.town ||
@@ -193,78 +280,27 @@ export function parseNominatimAddress(response: NominatimResponse): ParsedAddres
     addr.neighbourhood ||
     null;
 
-  // --- Pick district ---
   const rawDistrict =
     addr.district ||
     addr.county ||
     addr.state_district ||
     null;
 
-  // --- Pick state ---
   const rawState = addr.state || null;
-
-  // --- Pick country (exclude country_code like "in") ---
   const rawCountry = addr.country || null;
 
-  // --- Build ordered parts list ---
-  const rawParts: (string | null)[] = [rawLocality, rawDistrict, rawState, rawCountry];
+  const formattedDistrict = rawDistrict
+    ? /district$/i.test(rawDistrict.trim())
+      ? rawDistrict.trim()
+      : `${rawDistrict.trim()} District`
+    : null;
 
-  // --- Deduplication pass ---
-  const seenNormalized = new Set<string>();
-  const deduped: string[] = [];
-
-  for (const part of rawParts) {
-    if (!part || part.trim() === '') continue;
-
-    const normalized = normalizeForDedup(part);
-    if (seenNormalized.has(normalized)) continue;
-
-    // Also check if adding this part would be a duplicate of something
-    // already in the list when normalized (e.g., "Tiruppur" vs "Tiruppur District")
-    let isDuplicate = false;
-    for (const seen of seenNormalized) {
-      if (normalized.startsWith(seen) || seen.startsWith(normalized)) {
-        isDuplicate = true;
-        break;
-      }
-    }
-    if (isDuplicate) continue;
-
-    seenNormalized.add(normalized);
-    deduped.push(part.trim());
-  }
-
-  // --- Format district with "District" suffix if not already present ---
-  let formattedDistrict: string | null = null;
-  if (rawDistrict) {
-    const trimmed = rawDistrict.trim();
-    formattedDistrict = /district$/i.test(trimmed)
-      ? trimmed
-      : `${trimmed} District`;
-  }
-
-  // --- Rebuild deduped with formatted district ---
-  const finalParts: string[] = [];
-  const seenFinal = new Set<string>();
-
-  for (const part of [rawLocality, formattedDistrict, rawState, rawCountry]) {
-    if (!part || part.trim() === '') continue;
-    const norm = normalizeForDedup(part);
-
-    let isDuplicate = false;
-    for (const seen of seenFinal) {
-      if (norm.startsWith(seen) || seen.startsWith(norm)) {
-        isDuplicate = true;
-        break;
-      }
-    }
-    if (isDuplicate) continue;
-
-    seenFinal.add(norm);
-    finalParts.push(part.trim());
-  }
-
-  const formatted = finalParts.join(', ');
+  const formatted = formatCanonicalAddress({
+    village: rawLocality || undefined,
+    district: formattedDistrict || undefined,
+    state: rawState || undefined,
+    country: rawCountry || undefined,
+  });
 
   return {
     locality: rawLocality,

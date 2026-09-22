@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Challenge, ChallengeCategory, ChallengeUrgency } from '../../types';
 import { ChallengeEvaluationModal } from './ChallengeEvaluationModal';
+import { DownloadReportButton } from '../common/DownloadReportButton';
 import {
   Sparkles,
   Search,
@@ -380,6 +381,8 @@ export const UniversityChallengesPage: React.FC = () => {
                       <span>View Full Evidence Dossier</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
+
+                    <DownloadReportButton challenge={ch} size="sm" className="w-full justify-center" />
                   </div>
                 </div>
               </div>
