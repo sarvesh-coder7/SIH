@@ -213,9 +213,9 @@ export const GovernmentLayout: React.FC = () => {
   const currentLevelInfo = accessLevelLabels[accessLevel] || accessLevelLabels.state;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* Official State Header */}
-      <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
+      <header className="shrink-0 bg-slate-900 text-white border-b border-slate-800 z-30 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left: Branding */}
@@ -346,10 +346,10 @@ export const GovernmentLayout: React.FC = () => {
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 overflow-hidden items-stretch">
         {/* Navigation Sidebar */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 p-4 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:rounded-2xl lg:shadow-xs lg:border pt-sidebar-enter ${
+          className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 p-4 my-6 overflow-y-auto shrink-0 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:rounded-2xl lg:shadow-xs lg:border pt-sidebar-enter ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -452,7 +452,7 @@ export const GovernmentLayout: React.FC = () => {
         </aside>
 
         {/* Content Area */}
-        <main className="flex-1 min-w-0">
+        <main className="flex-1 min-w-0 py-6 overflow-y-auto pb-24 lg:pb-8">
           <ErrorBoundary>
             {renderActiveView()}
           </ErrorBoundary>

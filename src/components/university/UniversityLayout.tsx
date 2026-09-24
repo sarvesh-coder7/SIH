@@ -325,11 +325,10 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-600 selection:text-white">
-
+    <div className="h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased overflow-hidden selection:bg-indigo-600 selection:text-white">
 
       {/* Top Institutional Header */}
-      <header className="sticky top-0 z-30 w-full bg-white/95 backdrop-blur-md text-slate-900 border-b border-slate-200/80 shadow-xs">
+      <header className="shrink-0 z-30 w-full bg-white/95 backdrop-blur-md text-slate-900 border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3 shrink-0">
@@ -612,9 +611,9 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
       </header>
 
       {/* Body with Desktop Sidebar + Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-6 lg:gap-8 items-start">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 lg:gap-8 overflow-hidden items-stretch">
         {/* Desktop Sidebar (Fixed / Sticky Left Navigation) */}
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-4 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto pr-1">
+        <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-4 py-6 overflow-y-auto pr-1">
           {/* Main University Navigation */}
           <div className="bg-white rounded-2xl border border-slate-200/90 p-3 shadow-2xs space-y-4">
             {navItems.map((group, gIdx) => (
@@ -703,7 +702,7 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0 pb-20 lg:pb-8">
+        <main className="flex-1 min-w-0 py-6 overflow-y-auto pb-24 lg:pb-8">
           {children}
         </main>
       </div>
