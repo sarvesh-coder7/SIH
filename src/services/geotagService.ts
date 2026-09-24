@@ -58,6 +58,42 @@ export interface LocationData {
   source: 'nominatim-osm';
 }
 
+// ============================================================
+// GPS ACCURACY CONSTANTS
+// ============================================================
+
+/** Best-case accuracy threshold: accept immediately and stop retrying (metres). */
+export const GPS_GOOD_THRESHOLD = 100;
+
+/** Maximum acceptable accuracy for submission (metres). Readings above this are rejected. */
+export const GPS_ACCEPTABLE_THRESHOLD = 2000;
+
+/** Maximum number of automatic GPS retry attempts. */
+const GPS_MAX_RETRIES = 3;
+
+// ============================================================
+// TYPED GPS RESULT / ERROR
+// ============================================================
+
+export type GPSErrorCode =
+  | 'PERMISSION_DENIED'
+  | 'POSITION_UNAVAILABLE'
+  | 'TIMEOUT'
+  | 'INVALID_COORDINATES'
+  | 'ACCURACY_TOO_LOW'
+  | 'UNSUPPORTED';
+
+export interface GPSResult {
+  gps: GPSData;
+  /** Set when accuracy > GPS_GOOD_THRESHOLD but ≤ GPS_ACCEPTABLE_THRESHOLD */
+  accuracyWarning?: string;
+}
+
+export interface GPSError {
+  code: GPSErrorCode;
+  message: string;
+}
+
 /**
  * Validates that GPS coordinates are within legal Earth boundaries:
  * Latitude: -90 to 90
@@ -144,13 +180,16 @@ export function formatCanonicalAddress(location: {
 }
 
 // ============================================================
-// GPS CAPTURE
+// GPS CAPTURE — SINGLE SHOT (kept for photo geotag session)
 // ============================================================
 
 /**
  * Obtains the device's current GPS position.
  * Uses high accuracy mode. Never returns a cached or stale position.
  * Throws a user-friendly error string on failure.
+ *
+ * NOTE: For Step 2 location detection, prefer `getReliableGPS()` which
+ * automatically retries and tracks the best reading.
  */
 export function getCurrentGPS(): Promise<GPSData> {
   return new Promise((resolve, reject) => {
@@ -161,9 +200,9 @@ export function getCurrentGPS(): Promise<GPSData> {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        let finalLat = position.coords.latitude;
-        let finalLng = position.coords.longitude;
-        let finalAcc = position.coords.accuracy;
+        const finalLat = position.coords.latitude;
+        const finalLng = position.coords.longitude;
+        const finalAcc = position.coords.accuracy;
 
         if (!isValidCoordinate(finalLat, finalLng)) {
           reject('Invalid GPS coordinates received from device.');
@@ -208,6 +247,161 @@ export function getCurrentGPS(): Promise<GPSData> {
 }
 
 // ============================================================
+// GPS CAPTURE — RELIABLE (with auto-retry and best-reading)
+// ============================================================
+
+/**
+ * Attempts to obtain a reliable GPS position with up to GPS_MAX_RETRIES attempts.
+ *
+ * Strategy:
+ * - Each attempt uses enableHighAccuracy=true, maximumAge=0, timeout=20000
+ * - If accuracy ≤ GPS_GOOD_THRESHOLD (100m): resolves immediately (great reading)
+ * - Otherwise: keeps the best reading seen so far, tries again
+ * - After all retries: if best accuracy ≤ GPS_ACCEPTABLE_THRESHOLD (2000m): resolves
+ *   with an accuracyWarning describing the limited accuracy
+ * - If best accuracy > GPS_ACCEPTABLE_THRESHOLD: throws GPSError with code ACCURACY_TOO_LOW
+ *
+ * Callbacks let the caller update UI between attempts:
+ * @param onAttempt - called at the start of each attempt (attempt number 1-based)
+ * @param signal    - AbortSignal to cancel the entire retry sequence
+ */
+export async function getReliableGPS(options?: {
+  onAttempt?: (attempt: number, maxAttempts: number) => void;
+  signal?: AbortSignal;
+}): Promise<GPSResult> {
+  if (!navigator.geolocation) {
+    const err: GPSError = {
+      code: 'UNSUPPORTED',
+      message: 'Geolocation is not supported by your browser.',
+    };
+    throw err;
+  }
+
+  let bestReading: GPSData | null = null;
+
+  const getSinglePosition = (): Promise<GPSData> =>
+    new Promise((resolve, reject) => {
+      if (options?.signal?.aborted) {
+        reject({ code: 'POSITION_UNAVAILABLE', message: 'Cancelled.' } as GPSError);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const acc = position.coords.accuracy;
+
+          if (!isValidCoordinate(lat, lng)) {
+            reject({
+              code: 'INVALID_COORDINATES',
+              message: 'Invalid GPS coordinates received from device.',
+            } as GPSError);
+            return;
+          }
+
+          resolve({ latitude: lat, longitude: lng, accuracy: acc, timestamp: position.timestamp });
+        },
+        (error) => {
+          let code: GPSErrorCode;
+          let message: string;
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              code = 'PERMISSION_DENIED';
+              message =
+                'Location permission denied. Please allow location access in your browser settings and try again.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              code = 'POSITION_UNAVAILABLE';
+              message =
+                'Your device location is currently unavailable. Please ensure GPS / location services are enabled.';
+              break;
+            case error.TIMEOUT:
+              code = 'TIMEOUT';
+              message = 'GPS timed out. Please try again or enter your location manually.';
+              break;
+            default:
+              code = 'POSITION_UNAVAILABLE';
+              message = 'Unable to determine your location. Please try again.';
+          }
+          reject({ code, message } as GPSError);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 0,
+        }
+      );
+    });
+
+  for (let attempt = 1; attempt <= GPS_MAX_RETRIES; attempt++) {
+    if (options?.signal?.aborted) {
+      const err: GPSError = { code: 'POSITION_UNAVAILABLE', message: 'Request cancelled.' };
+      throw err;
+    }
+
+    options?.onAttempt?.(attempt, GPS_MAX_RETRIES);
+
+    try {
+      const gps = await getSinglePosition();
+
+      // Track best reading
+      if (!bestReading || gps.accuracy < bestReading.accuracy) {
+        bestReading = gps;
+      }
+
+      // Good enough — stop retrying
+      if (gps.accuracy <= GPS_GOOD_THRESHOLD) {
+        return { gps };
+      }
+
+      // Not great, but try again unless this is the last attempt
+      if (attempt < GPS_MAX_RETRIES) {
+        console.info(
+          `[geotagService] GPS attempt ${attempt}/${GPS_MAX_RETRIES}: accuracy=${Math.round(gps.accuracy)}m — retrying`
+        );
+        continue;
+      }
+    } catch (err: unknown) {
+      const gpsErr = err as GPSError;
+      // PERMISSION_DENIED is fatal — no point retrying
+      if (gpsErr.code === 'PERMISSION_DENIED') {
+        throw gpsErr;
+      }
+      // For timeout / unavailable: if we already have a best reading, continue to next attempt or finish
+      if (attempt < GPS_MAX_RETRIES) {
+        console.info(
+          `[geotagService] GPS attempt ${attempt}/${GPS_MAX_RETRIES} failed (${gpsErr.code}) — retrying`
+        );
+        continue;
+      }
+      // Last attempt failed — fall through to check bestReading
+    }
+  }
+
+  // All attempts done — evaluate best reading
+  if (bestReading) {
+    if (bestReading.accuracy <= GPS_ACCEPTABLE_THRESHOLD) {
+      const warning = `Location accuracy is limited (±${Math.round(bestReading.accuracy)} m). The address may be approximate. You can retry or enter your location manually.`;
+      return { gps: bestReading, accuracyWarning: warning };
+    }
+    // Accuracy is completely unusable
+    const err: GPSError = {
+      code: 'ACCURACY_TOO_LOW',
+      message: 'Unable to get accurate location. Please enable device location and try again.',
+    };
+    throw err;
+  }
+
+  // Should not reach here, but safety net
+  const err: GPSError = {
+    code: 'POSITION_UNAVAILABLE',
+    message: 'Unable to determine your location. Please try again or enter manually.',
+  };
+  throw err;
+}
+
+// ============================================================
 // REVERSE GEOCODING (OSM NOMINATIM)
 // ============================================================
 
@@ -242,6 +436,52 @@ export async function reverseGeocode(
     const data: NominatimResponse = await response.json();
     return data;
   } catch (err) {
+    console.warn('[geotagService] Nominatim reverse geocoding failed:', err);
+    return null;
+  }
+}
+
+/**
+ * AbortSignal-aware version of reverseGeocode.
+ * When `signal` is aborted, the fetch is cancelled and null is returned.
+ * Use this in the Step 2 location handler to prevent stale geocoding responses
+ * from overwriting a newer GPS reading.
+ */
+export async function reverseGeocodeWithAbort(
+  latitude: number,
+  longitude: number,
+  signal: AbortSignal
+): Promise<NominatimResponse | null> {
+  if (!isValidCoordinate(latitude, longitude)) {
+    console.warn('[geotagService] Invalid coordinates provided to reverseGeocodeWithAbort:', latitude, longitude);
+    return null;
+  }
+
+  if (signal.aborted) return null;
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1&accept-language=en`;
+
+    const response = await fetch(url, {
+      signal,
+      headers: {
+        'User-Agent': 'SIH2026-CitizenApp/1.0 (contact@sih2026.gov.in)',
+        'Accept-Language': 'en',
+      },
+    });
+
+    if (!response.ok) {
+      console.warn('[geotagService] Nominatim responded with status', response.status);
+      return null;
+    }
+
+    const data: NominatimResponse = await response.json();
+    return data;
+  } catch (err: unknown) {
+    if ((err as { name?: string }).name === 'AbortError') {
+      console.info('[geotagService] Reverse geocoding cancelled (new request started).');
+      return null;
+    }
     console.warn('[geotagService] Nominatim reverse geocoding failed:', err);
     return null;
   }
@@ -323,6 +563,33 @@ export function parseNominatimAddress(response: NominatimResponse): ParsedAddres
 export async function buildLocationData(gps: GPSData): Promise<LocationData | null> {
   const nominatimResponse = await reverseGeocode(gps.latitude, gps.longitude);
   if (!nominatimResponse) return null;
+
+  const parsedAddress = parseNominatimAddress(nominatimResponse);
+  if (!parsedAddress.formatted) return null;
+
+  return {
+    latitude: gps.latitude,
+    longitude: gps.longitude,
+    accuracy: gps.accuracy,
+    capturedAt: gps.timestamp,
+    formattedAddress: parsedAddress.formatted,
+    parsedAddress,
+    source: 'nominatim-osm',
+  };
+}
+
+/**
+ * Abort-signal-aware version of buildLocationData.
+ * Uses reverseGeocodeWithAbort internally to prevent stale responses.
+ */
+export async function buildLocationDataWithAbort(
+  gps: GPSData,
+  signal: AbortSignal
+): Promise<LocationData | null> {
+  if (signal.aborted) return null;
+
+  const nominatimResponse = await reverseGeocodeWithAbort(gps.latitude, gps.longitude, signal);
+  if (!nominatimResponse || signal.aborted) return null;
 
   const parsedAddress = parseNominatimAddress(nominatimResponse);
   if (!parsedAddress.formatted) return null;

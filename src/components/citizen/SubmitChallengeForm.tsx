@@ -7,6 +7,8 @@ import confetti from 'canvas-confetti';
 // Google Maps removed — using OpenStreetMap iframe embed instead (no API key required)
 import {
   getCurrentGPS,
+  getReliableGPS,
+  buildLocationDataWithAbort,
   buildLocationData,
   stampPhotoWithAddress,
   formatCanonicalAddress,
@@ -14,6 +16,7 @@ import {
   getAccuracyLabel,
   calculateDistance,
   type GPSData,
+  type GPSError,
   type LocationData,
 } from '../../services/geotagService';
 import {
@@ -82,6 +85,7 @@ interface AttachedFile {
   name: string;
   size: string;
   url?: string;
+  locationData?: LocationData;
 }
 
 const CITIZEN_CATEGORIES = [
@@ -300,9 +304,31 @@ export const SubmitChallengeForm: React.FC = () => {
   const [block, setBlock] = useState('');
   const [village, setVillage] = useState('');
 
-  const [isLocating, setIsLocating] = useState<boolean>(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [locationSuccessMsg, setLocationSuccessMsg] = useState<string | null>(null);
+  // ── GPS Location Status Machine ──────────────────────────────────────────
+  // Replaces the old boolean isLocating + string locationError.
+  // Every state MUST eventually resolve — no infinite spinner.
+  type LocationStatus =
+    | 'idle'              // not yet attempted
+    | 'detecting'         // first attempt in progress
+    | 'retrying'          // subsequent attempt in progress
+    | 'geocoding'         // GPS acquired — reverse geocoding address
+    | 'success'           // fully resolved
+    | 'poor_accuracy'     // accuracy > GPS_GOOD_THRESHOLD but ≤ GPS_ACCEPTABLE_THRESHOLD
+    | 'permission_denied' // user denied permission
+    | 'unavailable'       // POSITION_UNAVAILABLE
+    | 'timeout'           // TIMEOUT
+    | 'unsupported'       // browser does not support geolocation
+    | 'manual_required';  // accuracy too low — must enter manually
+
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
+  const [locationAttempt, setLocationAttempt] = useState<number>(0); // retry display
+  const [locationAccuracyWarning, setLocationAccuracyWarning] = useState<string | null>(null);
+  const [locationErrorMsg, setLocationErrorMsg] = useState<string | null>(null);
+
+  // AbortController ref — cancels stale geocoding fetches on new GPS request
+  const geocodeAbortRef = useRef<AbortController | null>(null);
+  // Request ID — incremented on every GPS request; async callbacks check before updating state
+  const locationRequestIdRef = useRef<number>(0);
 
   // ── Canonical location helper ──────────────────────────────────────────────
   // Returns the single source of truth for the selected location.
@@ -313,13 +339,13 @@ export const SubmitChallengeForm: React.FC = () => {
   const getCanonicalLocation = () => {
     if (verifiedLocation) {
       const cleanLocality = village.trim() || verifiedLocation.parsedAddress?.locality || '';
-      const cleanDistrict = district.trim() || verifiedLocation.parsedAddress?.district || 'Ranchi';
+      const cleanDistrict = district.trim() || verifiedLocation.parsedAddress?.district || '';
       const cleanBlock = block.trim();
 
       const displayAddress = formatCanonicalAddress({
         village: cleanLocality,
         block: cleanBlock,
-        district: cleanDistrict,
+        district: cleanDistrict || undefined,
         formattedAddress: verifiedLocation.formattedAddress,
       });
 
@@ -348,8 +374,9 @@ export const SubmitChallengeForm: React.FC = () => {
       return {
         method: 'manual' as const,
         displayAddress,
-        latitude: 23.3441, // Approx center for manual entry fallback
-        longitude: 85.3096,
+        // Manual entry: do NOT fabricate GPS coordinates
+        latitude: null as number | null,
+        longitude: null as number | null,
         accuracy: null,
         district: cleanDist,
         block: cleanBlk,
@@ -412,6 +439,10 @@ export const SubmitChallengeForm: React.FC = () => {
   // The unmodified canvas capture — used as stamp source, never re-stamped
   const originalCaptureRef = useRef<string | null>(null);
 
+  // New: Preview state before adding to main gallery
+  const [photoPreview, setPhotoPreview] = useState<AttachedPhoto | null>(null);
+  const cameraGeocodeAbortRef = useRef<AbortController | null>(null);
+
   // Camera Fix: ensure srcObject is bound when modal DOM is ready
   useEffect(() => {
     if (isCameraOpen && cameraStream && videoRef.current) {
@@ -420,45 +451,65 @@ export const SubmitChallengeForm: React.FC = () => {
     }
   }, [isCameraOpen, cameraStream]);
 
-  // Geolocation Handler — also reverse geocodes to get a human-readable address
+  // Geolocation Handler — uses getReliableGPS() with auto-retry + AbortController
   const handleUseCurrentLocation = async () => {
-    // Prevent concurrent rapid multi-clicks
-    if (isLocating) return;
+    // Prevent concurrent rapid multi-clicks while an attempt is already running
+    if (locationStatus === 'detecting' || locationStatus === 'retrying' || locationStatus === 'geocoding') return;
 
-    setIsLocating(true);
-    setLocationError(null);
-    setLocationSuccessMsg('📍 Detecting location...');
-
-    if (!navigator.geolocation) {
-      setIsLocating(false);
-      setLocationError('Geolocation is not supported by your browser. Please enter location manually.');
-      return;
+    // ── Reset all location state for a completely fresh request ──
+    // Abort any in-flight geocoding from a previous request
+    if (geocodeAbortRef.current) {
+      geocodeAbortRef.current.abort();
     }
+    const newController = new AbortController();
+    geocodeAbortRef.current = newController;
+
+    // Increment request ID so stale async callbacks can detect they are outdated
+    const currentRequestId = locationRequestIdRef.current + 1;
+    locationRequestIdRef.current = currentRequestId;
+
+    // Clear all previous location data and state
+    setVerifiedLocation(null);
+    setDistrict('');
+    setBlock('');
+    setVillage('');
+    setLocationMethod(null);
+    setLocationAccuracyWarning(null);
+    setLocationErrorMsg(null);
+    setLocationAttempt(1);
+    setLocationStatus('detecting');
+
+    const isStale = () => locationRequestIdRef.current !== currentRequestId || newController.signal.aborted;
 
     try {
-      const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-      if (permissionStatus.state === 'denied') {
-        setIsLocating(false);
-        setLocationError('Location permission is required. Please allow location access in browser settings or enter manually.');
-        showToast('error', 'Permission Denied', 'Please allow location access in your browser settings or enter location manually.');
-        return;
-      }
-    } catch {}
+      // Use getReliableGPS which retries up to 3 times internally
+      const result = await getReliableGPS({
+        signal: newController.signal,
+        onAttempt: (attempt, max) => {
+          if (isStale()) return;
+          setLocationAttempt(attempt);
+          if (attempt === 1) {
+            setLocationStatus('detecting');
+          } else {
+            setLocationStatus('retrying');
+          }
+          console.info(`[Location] GPS attempt ${attempt}/${max}`);
+        },
+      });
 
-    try {
-      const gpsData = await getCurrentGPS();
+      if (isStale()) return;
 
-      if (gpsData.accuracy > 500) {
-        setIsLocating(false);
-        setLocationError(`Location accuracy is too low (±${Math.round(gpsData.accuracy)}m). Please enable device GPS/location or enter manually.`);
-        return;
-      }
+      const gpsData = result.gps;
 
-      setLocationSuccessMsg('📍 GPS acquired. Reverse geocoding address...');
-      let locationData = await buildLocationData(gpsData);
-      
+      // ── Phase 2: Reverse geocode ──
+      setLocationStatus('geocoding');
+
+      let locationData = await buildLocationDataWithAbort(gpsData, newController.signal);
+
+      if (isStale()) return;
+
       if (!locationData) {
-        // Fallback: construct raw coordinate address if reverse geocoding server returns null
+        // Reverse geocoding failed (network issue or cancelled) — build a coordinate fallback
         locationData = {
           latitude: gpsData.latitude,
           longitude: gpsData.longitude,
@@ -467,17 +518,20 @@ export const SubmitChallengeForm: React.FC = () => {
           formattedAddress: `${gpsData.latitude.toFixed(4)}°N, ${gpsData.longitude.toFixed(4)}°E`,
           parsedAddress: {
             locality: null,
-            district: district || 'Ranchi',
-            state: 'Jharkhand',
-            country: 'India',
+            district: null,
+            state: null,
+            country: null,
             formatted: `${gpsData.latitude.toFixed(4)}°N, ${gpsData.longitude.toFixed(4)}°E`,
           },
           source: 'nominatim-osm',
         };
       }
 
+      // Store the new verified location
       setVerifiedLocation(locationData);
+      setLocationMethod('gps');
 
+      // Populate manual fields from geocoded address (for reference / correction)
       if (locationData.parsedAddress) {
         const parsed = locationData.parsedAddress;
 
@@ -497,43 +551,64 @@ export const SubmitChallengeForm: React.FC = () => {
           if (normLoc !== normDist) {
             setVillage(parsed.locality);
           } else {
-            setVillage(''); // Avoid setting village identical to district name
+            setVillage('');
           }
         }
       }
 
-      if (gpsData.accuracy <= 100) {
-        setLocationSuccessMsg(`✓ Location detected (${gpsData.latitude.toFixed(4)}°, ${gpsData.longitude.toFixed(4)}°) ±${Math.round(gpsData.accuracy)}m`);
+      if (result.accuracyWarning) {
+        // GPS found but accuracy is limited (>100m but ≤2000m)
+        setLocationAccuracyWarning(result.accuracyWarning);
+        setLocationStatus('poor_accuracy');
+        showToast('info', 'Location Detected', `Accuracy: ±${Math.round(gpsData.accuracy)} m — you can retry or enter manually.`);
       } else {
-        setLocationSuccessMsg(`⚠ Location detected (${gpsData.latitude.toFixed(4)}°, ${gpsData.longitude.toFixed(4)}°) ±${Math.round(gpsData.accuracy)}m`);
+        setLocationStatus('success');
+        showToast('success', 'Location Detected', `GPS location captured (±${Math.round(gpsData.accuracy)} m).`);
       }
+    } catch (error: unknown) {
+      if (isStale()) return;
 
-      setLocationMethod('gps');
-      setIsLocating(false);
-      showToast('success', 'Location Detected', 'GPS location captured cleanly.');
-    } catch (error: any) {
-      setIsLocating(false);
-      const errMsg = error?.message || error || 'Unable to detect location. Please try again or enter the location manually.';
-      setLocationError(errMsg);
-      showToast('info', 'Location Notice', 'Unable to detect location automatically. You can enter location details manually below.');
+      const gpsErr = error as GPSError;
+      const code = gpsErr?.code;
+      const message = gpsErr?.message || 'Unable to detect location. Please try again or enter location manually.';
+
+      setLocationErrorMsg(message);
+
+      if (code === 'PERMISSION_DENIED') {
+        setLocationStatus('permission_denied');
+        showToast('error', 'Permission Denied', 'Please allow location access in your browser settings.');
+      } else if (code === 'TIMEOUT') {
+        setLocationStatus('timeout');
+        showToast('info', 'GPS Timeout', 'GPS timed out. You can retry or enter location manually.');
+      } else if (code === 'UNSUPPORTED') {
+        setLocationStatus('unsupported');
+        showToast('error', 'Not Supported', 'Your browser does not support location detection. Please enter manually.');
+      } else if (code === 'ACCURACY_TOO_LOW') {
+        setLocationStatus('manual_required');
+        showToast('info', 'GPS Unavailable', message);
+      } else {
+        setLocationStatus('unavailable');
+        showToast('info', 'Location Notice', 'Unable to detect location automatically. Please enter location details manually.');
+      }
     }
   };
 
   // Camera Open Handler
-  // Starts camera stream AND begins GPS acquisition in parallel.
+  // Starts camera stream AND begins fresh GPS acquisition in parallel.
   const handleOpenCamera = async () => {
-    // Enforce verifiedLocation before allowing camera capture
-    if (!verifiedLocation) {
-      showToast('error', 'Location Required', 'Please detect and verify your GPS location first.');
-      return;
-    }
-
     // Reset all photo-session state for a fresh capture
     setPhotoGpsStatus('idle');
     setPhotoGpsData(null);
     setPhotoLocationData(null);
     setPhotoGpsError(null);
+    setPhotoPreview(null);
     originalCaptureRef.current = null;
+
+    if (cameraGeocodeAbortRef.current) {
+      cameraGeocodeAbortRef.current.abort();
+    }
+    const newController = new AbortController();
+    cameraGeocodeAbortRef.current = newController;
 
     if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
       showToast('info', 'Camera Fallback', 'Camera access requires HTTPS. Falling back to device camera/gallery.');
@@ -544,10 +619,10 @@ export const SubmitChallengeForm: React.FC = () => {
     setIsCameraOpen(true);
     setCameraError(null);
 
-    // Start camera stream
+    // Start camera stream (front/rear logic managed by browser based on ideal facingMode)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: false,
       });
       setCameraStream(stream);
@@ -561,20 +636,38 @@ export const SubmitChallengeForm: React.FC = () => {
       setCameraError(errorMsg);
     }
 
-    // Pass the existing verified location explicitly into the photo capture session
-    setPhotoGpsData({
-      latitude: verifiedLocation.latitude,
-      longitude: verifiedLocation.longitude,
-      accuracy: verifiedLocation.accuracy,
-      timestamp: verifiedLocation.capturedAt
-    });
-    setPhotoLocationData(verifiedLocation);
-    setPhotoGpsStatus('ready');
+    // Parallel: Fetch fresh high-accuracy GPS for the photo
+    setPhotoGpsStatus('locating');
+    try {
+      const result = await getReliableGPS({
+        signal: newController.signal
+      });
+      if (newController.signal.aborted) return;
+      
+      setPhotoGpsData(result.gps);
+      setPhotoGpsStatus('geocoding');
+
+      const locData = await buildLocationDataWithAbort(result.gps, newController.signal);
+      if (newController.signal.aborted) return;
+
+      if (locData) {
+        setPhotoLocationData(locData);
+        setPhotoGpsStatus('ready');
+      } else {
+        setPhotoGpsError('Reverse geocoding failed.');
+        setPhotoGpsStatus('error');
+      }
+    } catch (err: unknown) {
+      if (newController.signal.aborted) return;
+      const gpsErr = err as GPSError;
+      setPhotoGpsError(gpsErr.message || 'Unable to detect fresh location.');
+      setPhotoGpsStatus('error');
+    }
   };
 
   // Capture Photo from Live Stream
-  // Captures original image ONCE, then stamps it with the verified address.
-  // Never re-stamps an already-stamped image.
+  // Captures original image ONCE, then stamps it with the fresh address.
+  // Sets it into preview mode before accepting.
   const handleCapturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
@@ -589,13 +682,12 @@ export const SubmitChallengeForm: React.FC = () => {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const originalDataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
-    // Store in ref (not state) to avoid triggering re-renders
     originalCaptureRef.current = originalDataUrl;
 
     const captureId = `photo-${Date.now()}`;
     const captureTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // 2. If we have a verified address, stamp it onto the original
+    // 2. Prepare new photo object based on fresh GPS data
     if (photoGpsStatus === 'ready' && photoLocationData) {
       try {
         const stampedDataUrl = await stampPhotoWithAddress(
@@ -603,11 +695,11 @@ export const SubmitChallengeForm: React.FC = () => {
           `📍 ${photoLocationData.formattedAddress}`
         );
 
-        const newPhoto: AttachedPhoto = {
+        setPhotoPreview({
           id: captureId,
           type: 'image',
-          url: stampedDataUrl,           // displayed: stamped
-          originalUrl: originalDataUrl,  // stored: unmodified
+          url: stampedDataUrl,
+          originalUrl: originalDataUrl,
           caption: 'Captured on site',
           timestamp: captureTimestamp,
           gpsCoordinates: {
@@ -621,14 +713,10 @@ export const SubmitChallengeForm: React.FC = () => {
           fileName: `camera_snap_${captureId}.jpg`,
           fileSize: '~1.2 MB',
           locationData: photoLocationData,
-        };
-
-        setPhotos((prev) => [...prev, newPhoto]);
-        showToast('success', 'Geotagged Photo Captured', `📍 ${photoLocationData.formattedAddress}`);
+        });
       } catch (stampErr) {
-        // Stamp failed — save original without stamp, still geotagged in metadata
-        console.warn('[geotagService] Stamping failed, saving unstamped photo:', stampErr);
-        const newPhoto: AttachedPhoto = {
+        console.warn('[geotagService] Stamping failed, saving unstamped photo to preview:', stampErr);
+        setPhotoPreview({
           id: captureId,
           type: 'image',
           url: originalDataUrl,
@@ -646,15 +734,12 @@ export const SubmitChallengeForm: React.FC = () => {
           fileName: `camera_snap_${captureId}.jpg`,
           fileSize: '~1.2 MB',
           locationData: photoLocationData,
-        };
-        setPhotos((prev) => [...prev, newPhoto]);
-        showToast('success', 'Photo Captured', 'Geotagged in metadata. Address stamp failed but coordinates are saved.');
+        });
       }
     } else {
-      // No verified address — save photo without stamp
-      // Use whatever GPS data we have in metadata, but do NOT show a fake address
+      // No verified fresh address — preview photo without stamp
       const hasGps = photoGpsData !== null;
-      const newPhoto: AttachedPhoto = {
+      setPhotoPreview({
         id: captureId,
         type: 'image',
         url: originalDataUrl,
@@ -667,29 +752,53 @@ export const SubmitChallengeForm: React.FC = () => {
               lng: Number(photoGpsData!.longitude.toFixed(6)),
             }
           : undefined,
-        geotagLocation: undefined, // no verified address — do NOT invent one
+        geotagLocation: undefined,
         accuracy: hasGps ? photoGpsData!.accuracy : undefined,
         isGeotagged: false,
         source: 'camera',
         fileName: `camera_snap_${captureId}.jpg`,
         fileSize: '~1.2 MB',
-      };
-      setPhotos((prev) => [...prev, newPhoto]);
-
-      const statusMessage =
-        photoGpsStatus === 'error'
-          ? 'Photo captured. Location could not be determined.'
-          : photoGpsStatus === 'locating' || photoGpsStatus === 'geocoding'
-          ? 'Photo captured. Location is still being detected.'
-          : 'Photo captured without location data.';
-      showToast('success', 'Photo Captured', statusMessage);
+      });
     }
 
+    // Stop video track since we are now previewing
+    if (cameraStream) {
+      cameraStream.getVideoTracks().forEach(track => track.stop());
+    }
+  };
+
+  const handleRetakePhoto = async () => {
+    setPhotoPreview(null);
+    originalCaptureRef.current = null;
+    
+    // Restart camera stream
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      setCameraStream(stream);
+    } catch (err: any) {
+      console.warn('Camera restart failed', err);
+      setCameraError('Unable to restart camera.');
+    }
+  };
+
+  const handleUsePhoto = () => {
+    if (photoPreview) {
+      setPhotos((prev) => [...prev, photoPreview]);
+      showToast('success', 'Photo Added', 'Evidence captured successfully.');
+    }
     handleCloseCamera();
   };
 
   // Close Camera — clears ALL photo-session geotag state (retake safety)
   const handleCloseCamera = () => {
+    if (cameraGeocodeAbortRef.current) {
+      cameraGeocodeAbortRef.current.abort();
+      cameraGeocodeAbortRef.current = null;
+    }
+
     setIsCameraOpen(false);
     if (cameraStream) {
       cameraStream.getTracks().forEach((track) => track.stop());
@@ -698,16 +807,31 @@ export const SubmitChallengeForm: React.FC = () => {
     setIsVideoRecordOpen(false);
     if (isRecording) handleStopRecording();
 
-    // Clear photo-session state so retake gets a fresh GPS reading
+    // Clear photo-session state so next open gets a fresh GPS reading
     setPhotoGpsStatus('idle');
     setPhotoGpsData(null);
     setPhotoLocationData(null);
     setPhotoGpsError(null);
+    setPhotoPreview(null);
     originalCaptureRef.current = null;
   };
 
   // Video Camera Handlers
   const handleOpenVideoCamera = async () => {
+    // Reset all photo-session state for a fresh capture (reusing same states for video)
+    setPhotoGpsStatus('idle');
+    setPhotoGpsData(null);
+    setPhotoLocationData(null);
+    setPhotoGpsError(null);
+    setPhotoPreview(null);
+    originalCaptureRef.current = null;
+
+    if (cameraGeocodeAbortRef.current) {
+      cameraGeocodeAbortRef.current.abort();
+    }
+    const newController = new AbortController();
+    cameraGeocodeAbortRef.current = newController;
+
     if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
       showToast('info', 'Video Fallback', 'Video recording requires HTTPS. Falling back to device camera/gallery.');
       videoCaptureRef.current?.click();
@@ -719,19 +843,48 @@ export const SubmitChallengeForm: React.FC = () => {
     setRecordingTime(0);
     setIsRecording(false);
     recordedChunksRef.current = [];
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: true, // Ask for mic
       });
       setCameraStream(stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch(err => console.warn('Autoplay blocked:', err));
       }
     } catch (err) {
       console.warn('Camera/Mic access denied or unavailable', err);
       setCameraError('Camera or Microphone access unavailable. Please check permissions.');
+    }
+
+    // Parallel: Fetch fresh high-accuracy GPS for the video
+    setPhotoGpsStatus('locating');
+    try {
+      const result = await getReliableGPS({
+        signal: newController.signal
+      });
+      if (newController.signal.aborted) return;
+      
+      setPhotoGpsData(result.gps);
+      setPhotoGpsStatus('geocoding');
+
+      const locData = await buildLocationDataWithAbort(result.gps, newController.signal);
+      if (newController.signal.aborted) return;
+
+      if (locData) {
+        setPhotoLocationData(locData);
+        setPhotoGpsStatus('ready');
+      } else {
+        setPhotoGpsError('Reverse geocoding failed.');
+        setPhotoGpsStatus('error');
+      }
+    } catch (err: unknown) {
+      if (newController.signal.aborted) return;
+      const gpsErr = err as GPSError;
+      setPhotoGpsError(gpsErr.message || 'Unable to detect fresh location.');
+      setPhotoGpsStatus('error');
     }
   };
 
@@ -757,6 +910,8 @@ export const SubmitChallengeForm: React.FC = () => {
         name: `recorded_video_${Date.now()}.webm`,
         size: `${(blob.size / (1024 * 1024)).toFixed(1)} MB`,
         url,
+        // Attach the fresh location data if available
+        locationData: photoLocationData || undefined,
       };
 
       setOtherFiles((prev) => [...prev, newVideo]);
@@ -919,7 +1074,11 @@ export const SubmitChallengeForm: React.FC = () => {
             caption: f.name || (f.type === 'video' ? 'Site video evidence' : 'Attached document'),
             fileName: f.name,
             fileSize: f.size,
-            source: 'upload' as const,
+            source: (f.locationData ? 'camera' : 'upload') as 'camera' | 'upload',
+            gpsCoordinates: f.locationData ? { lat: Number(f.locationData.latitude.toFixed(6)), lng: Number(f.locationData.longitude.toFixed(6)) } : undefined,
+            geotagLocation: f.locationData?.formattedAddress,
+            accuracy: f.locationData?.accuracy,
+            isGeotagged: !!f.locationData,
           })),
         ],
       });
@@ -1430,35 +1589,46 @@ export const SubmitChallengeForm: React.FC = () => {
               <button
                 type="button"
                 onClick={handleUseCurrentLocation}
-                disabled={isLocating}
+                disabled={locationStatus === 'detecting' || locationStatus === 'retrying' || locationStatus === 'geocoding'}
                 className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shrink-0"
               >
-                {isLocating ? (
+                {locationStatus === 'detecting' || locationStatus === 'retrying' || locationStatus === 'geocoding' ? (
                   <>
                     <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                    <span>Detecting GPS...</span>
+                    <span>Detecting GPS{locationAttempt > 1 ? ` (Attempt ${locationAttempt})` : ''}...</span>
                   </>
                 ) : (
                   <>
                     <MapPin className="w-4 h-4" />
-                    <span>Use My Current Location</span>
+                    <span>
+                      {['poor_accuracy', 'permission_denied', 'unavailable', 'timeout', 'unsupported', 'manual_required'].includes(locationStatus) || locationErrorMsg 
+                        ? 'Retry Location' 
+                        : 'Use My Current Location'}
+                    </span>
                   </>
                 )}
               </button>
             </div>
 
             {/* GPS Status */}
-            {locationSuccessMsg && (
+            {locationStatus === 'success' && verifiedLocation && (
               <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>{locationSuccessMsg}</span>
+                <span>GPS location captured cleanly (±{Math.round(verifiedLocation.accuracy)}m).</span>
+              </div>
+            )}
+            
+            {locationStatus === 'poor_accuracy' && locationAccuracyWarning && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>{locationAccuracyWarning}</span>
               </div>
             )}
 
-            {locationError && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
-                <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>{locationError}</span>
+            {locationErrorMsg && !['idle', 'detecting', 'retrying', 'geocoding', 'success', 'poor_accuracy'].includes(locationStatus) && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                <Info className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{locationErrorMsg}</span>
               </div>
             )}
 
@@ -2121,7 +2291,7 @@ export const SubmitChallengeForm: React.FC = () => {
                             {photos.map((p) => {
                               const reportLoc = getCanonicalLocation();
                               let distance: number | null = null;
-                              if (reportLoc && p.gpsCoordinates) {
+                              if (reportLoc && reportLoc.latitude !== null && reportLoc.longitude !== null && p.gpsCoordinates) {
                                 distance = calculateDistance(
                                   reportLoc.latitude,
                                   reportLoc.longitude,
@@ -2300,18 +2470,26 @@ export const SubmitChallengeForm: React.FC = () => {
               </button>
             </div>
 
-            {/* Video Viewfinder */}
+            {/* Video Viewfinder / Preview */}
             <div className="relative aspect-4/3 bg-black rounded-2xl overflow-hidden flex items-center justify-center border border-slate-800">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
+              {photoPreview ? (
+                <img
+                  src={photoPreview.url}
+                  alt="Captured preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+              )}
               <canvas ref={canvasRef} className="hidden" />
 
-              {cameraError && (
+              {cameraError && !photoPreview && (
                 <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center space-y-3">
                   <AlertCircle className="w-8 h-8 text-amber-400" />
                   <p className="text-xs text-slate-300">{cameraError}</p>
@@ -2382,27 +2560,48 @@ export const SubmitChallengeForm: React.FC = () => {
             </div>
             {/* ────────────────────────────────────────────────────────────── */}
 
-            {/* Shutter Button */}
+            {/* Action Buttons */}
             <div className="flex items-center justify-center gap-4 pt-2">
-              <button
-                type="button"
-                onClick={handleCloseCamera}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium rounded-xl text-slate-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCapturePhoto}
-                className="w-14 h-14 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform"
-                title={
-                  photoGpsStatus === 'ready'
-                    ? `Capture geotagged photo — ${photoLocationData?.formattedAddress}`
-                    : 'Capture photo (location still loading)'
-                }
-              >
-                <div className="w-10 h-10 rounded-full border-2 border-slate-950" />
-              </button>
+              {photoPreview ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleRetakePhoto}
+                    className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-sm font-bold rounded-xl text-slate-300 transition-colors"
+                  >
+                    Retake Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUsePhoto}
+                    className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 text-sm font-bold rounded-xl shadow-lg hover:shadow-xl transition-all"
+                  >
+                    Use Photo
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCloseCamera}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium rounded-xl text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCapturePhoto}
+                    className="w-14 h-14 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform"
+                    title={
+                      photoGpsStatus === 'ready'
+                        ? `Capture geotagged photo — ${photoLocationData?.formattedAddress}`
+                        : 'Capture photo (location still loading)'
+                    }
+                  >
+                    <div className="w-10 h-10 rounded-full border-2 border-slate-950" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -2467,6 +2666,59 @@ export const SubmitChallengeForm: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* ── Location Status Banner ────────────────────────────────────── */}
+            {/* Shows real-time GPS/geocoding status. Appears exactly once. */}
+            <div className="rounded-xl overflow-hidden text-xs">
+              {photoGpsStatus === 'idle' && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 text-slate-400">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <span>Preparing location detection...</span>
+                </div>
+              )}
+
+              {photoGpsStatus === 'locating' && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 text-amber-300">
+                  <div className="w-3 h-3 border-2 border-amber-300 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <span>📍 Detecting your location...</span>
+                </div>
+              )}
+
+              {photoGpsStatus === 'geocoding' && (
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 text-amber-300">
+                  <div className="w-3 h-3 border-2 border-amber-300 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <span>📍 Getting location address...</span>
+                </div>
+              )}
+
+              {photoGpsStatus === 'ready' && photoLocationData && (
+                <div className="px-3 py-2.5 bg-emerald-900/60 border border-emerald-700/50">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="text-emerald-300 font-bold">
+                        📍 {photoLocationData.formattedAddress}
+                      </p>
+                      <p className="text-emerald-500 text-[10px]">
+                        GPS ±{Math.round(photoLocationData.accuracy)}m · {getAccuracyLabel(photoLocationData.accuracy)} accuracy · OSM Nominatim
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {photoGpsStatus === 'error' && (
+                <div className="px-3 py-2.5 bg-rose-900/50 border border-rose-700/50">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                    <p className="text-rose-300">
+                      {photoGpsError || 'Location unavailable. Video will be captured without geotag.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* ────────────────────────────────────────────────────────────── */}
 
             {/* Record Controls */}
             <div className="flex items-center justify-center gap-4 pt-2">
