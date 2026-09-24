@@ -5,26 +5,21 @@ import { IndustryExpressInterestModal } from './IndustryExpressInterestModal';
 import {
   Building2,
   Handshake,
-  TrendingUp,
-  Award,
-  Sparkles,
   Layers,
   ChevronRight,
   ShieldCheck,
-  CheckCircle2,
   Clock,
   DollarSign,
-  Cpu,
   MapPin,
-  ArrowUpRight,
   Search,
-  Plus,
+  Award,
 } from 'lucide-react';
 
 export const IndustryDashboard: React.FC = () => {
   const {
     activeIndustry,
     currentIndustryMember,
+    challenges,
     projects,
     collaborations,
     setSelectedProjectId,
@@ -32,329 +27,600 @@ export const IndustryDashboard: React.FC = () => {
     setCurrentView,
   } = useApp();
 
-  const [selectedExpressProject, setSelectedExpressProject] = useState<ProjectLifecycle | null>(null);
+  const [selectedExpressProject, setSelectedExpressProject] =
+    useState<ProjectLifecycle | null>(null);
+
+  /* -----------------------------
+     Collaboration data
+  ------------------------------ */
 
   const activeCollabs = collaborations.filter(
     (c) => c.status === 'Active' || c.status === 'Accepted'
   );
+
   const pendingRequests = collaborations.filter(
     (c) => c.status === 'Pending' || c.status === 'Under Review'
   );
 
-  // Recommended matching projects
+  /* -----------------------------
+     Real challenge data
+  ------------------------------ */
+
+  const industryChallenges = challenges.filter(
+    (challenge) =>
+      challenge.status !== 'Rejected' &&
+      challenge.status !== 'Submitted' &&
+      challenge.status !== 'Under Review'
+  );
+
+  const recommendedChallenges = industryChallenges.slice(0, 3);
   const recommendedProjects = projects.slice(0, 3);
 
-  const handleOpenDetail = (projectId: string) => {
+  /* -----------------------------
+     Navigation helpers
+  ------------------------------ */
+
+  const handleOpenProjectDetail = (projectId: string) => {
     setSelectedProjectId(projectId);
     setCurrentView('industry-project-detail');
   };
 
-  const handleOpenWorkspace = (collabId: string, projectId: string) => {
-    setSelectedCollaborationId(collabId);
+  const handleOpenWorkspace = (
+    collaborationId: string,
+    projectId: string
+  ) => {
+    setSelectedCollaborationId(collaborationId);
     setSelectedProjectId(projectId);
     setCurrentView('industry-collaboration-workspace');
   };
 
+  const memberRole = (
+    currentIndustryMember?.role ||
+    currentIndustryMember?.member_role ||
+    'org_admin'
+  )
+    .replace(/_/g, ' ')
+    .toUpperCase();
+
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute -right-12 -top-12 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+    <div className="min-h-full space-y-8 pb-8">
+      {/* =========================================================
+          WELCOME HEADER
+      ========================================================== */}
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-emerald-100/60 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 right-24 h-56 w-56 rounded-full bg-teal-50 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                Industry Portal
-              </span>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-slate-200">
-                {(currentIndustryMember?.role || currentIndustryMember?.member_role || 'org_admin').replace('_', ' ').toUpperCase()}
-              </span>
+        <div className="relative z-10 p-6 sm:p-7 lg:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Industry Portal
+                </span>
+
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                  {memberRole}
+                </span>
+              </div>
+
+              <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-[32px]">
+                Good Morning, {currentIndustryMember?.name || 'Partner'}
+              </h1>
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <Building2 className="h-3.5 w-3.5" />
+                  </span>
+
+                  <span>
+                    Organization:{' '}
+                    <strong className="font-bold text-slate-700">
+                      {activeIndustry?.organization_name ||
+                        'Industry Partner'}
+                    </strong>
+                  </span>
+                </span>
+
+                <span className="hidden text-slate-300 sm:inline">•</span>
+
+                <span className="inline-flex items-center gap-2">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <MapPin className="h-3.5 w-3.5" />
+                  </span>
+
+                  <span>
+                    HQ:{' '}
+                    <strong className="font-semibold text-slate-700">
+                      {activeIndustry?.district || 'Jharkhand'},{' '}
+                      {activeIndustry?.state || 'Jharkhand'}
+                    </strong>
+                  </span>
+                </span>
+              </div>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Good Morning, {currentIndustryMember?.name || 'Partner'}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-3 text-xs text-emerald-200/90 pt-1">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Building2 className="w-4 h-4 text-emerald-400" />
-                Organization: <strong>{activeIndustry?.organization_name || 'Tata Steel Innovation Centre'}</strong>
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-emerald-400" />
-                HQ: {activeIndustry?.district || 'East Singhbhum'}, {activeIndustry?.state || 'Jharkhand'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
+            {/* BLUE ACTION BUTTON */}
             <button
+              type="button"
               onClick={() => setCurrentView('industry-discovery')}
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-md flex items-center gap-2 transition"
+              className="group inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-xs font-extrabold text-white shadow-sm shadow-blue-200 transition-all hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md"
             >
-              <Search className="w-4 h-4" />
+              <Search className="h-4 w-4 transition-transform group-hover:scale-110" />
               Discover Academic Projects
+              <ChevronRight className="h-3.5 w-3.5 opacity-70 transition-transform group-hover:translate-x-0.5" />
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Card 1: Relevant Projects */}
+      {/* =========================================================
+          KPI CARDS
+      ========================================================== */}
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* Relevant Challenges */}
         <div
           onClick={() => setCurrentView('industry-discovery')}
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-emerald-400 transition cursor-pointer group"
+          className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-md"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Relevant Projects
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition">
-              <Layers className="w-5 h-5" />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+                Relevant Challenges
+              </p>
+
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-3xl font-black tracking-tight text-slate-950">
+                  {industryChallenges.length}
+                </span>
+
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-extrabold text-emerald-700">
+                  Available
+                </span>
+              </div>
+            </div>
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 transition-transform group-hover:scale-105">
+              <Layers className="h-5 w-5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900">{projects.length}</span>
-            <span className="text-xs text-emerald-700 font-bold">In State Registry</span>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500">
-            Across 12 accredited state technical institutes
+
+          <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
+            Societal challenges available for collaboration
           </p>
         </div>
 
-        {/* Card 2: Collaboration Requests */}
+        {/* Partnership Requests */}
         <div
           onClick={() => setCurrentView('industry-requests')}
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-emerald-400 transition cursor-pointer group"
+          className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-md"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Partnership Requests
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition">
-              <Clock className="w-5 h-5" />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+                Partnership Requests
+              </p>
+
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-3xl font-black tracking-tight text-slate-950">
+                  {collaborations.length}
+                </span>
+
+                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold text-amber-700">
+                  {pendingRequests.length} Pending
+                </span>
+              </div>
+            </div>
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-100 transition-transform group-hover:scale-105">
+              <Clock className="h-5 w-5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900">{collaborations.length}</span>
-            <span className="text-xs text-amber-700 font-bold">
-              {pendingRequests.length} Pending Review
-            </span>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500">
+
+          <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
             Institutional proposals & agreements
           </p>
         </div>
 
-        {/* Card 3: Active Collaborations */}
+        {/* Active Collaborations */}
         <div
           onClick={() => setCurrentView('industry-collaborations')}
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-emerald-400 transition cursor-pointer group"
+          className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-md"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Active Co-Dev Workspaces
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition">
-              <Handshake className="w-5 h-5" />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+                Active Co-Dev Workspaces
+              </p>
+
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-3xl font-black tracking-tight text-slate-950">
+                  {activeCollabs.length}
+                </span>
+
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-extrabold text-emerald-700">
+                  Active
+                </span>
+              </div>
+            </div>
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 transition-transform group-hover:scale-105">
+              <Handshake className="h-5 w-5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900">{activeCollabs.length}</span>
-            <span className="text-xs text-emerald-700 font-bold">Active Partnerships</span>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500">
+
+          <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
             Joint student-industry engineering labs
           </p>
         </div>
 
-        {/* Card 4: CSR Grant Deployments */}
+        {/* CSR / Funding */}
         <div
           onClick={() => setCurrentView('industry-funding')}
-          className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-emerald-400 transition cursor-pointer group"
+          className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-md"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Supported Projects
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition">
-              <Award className="w-5 h-5" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+                Supported Projects
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="text-3xl font-black tracking-tight text-slate-950">
+                  ₹{(250000).toLocaleString()}
+                </span>
+
+                <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[9px] font-extrabold text-purple-700">
+                  Committed CSR
+                </span>
+              </div>
+            </div>
+
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 ring-1 ring-purple-100 transition-transform group-hover:scale-105">
+              <Award className="h-5 w-5" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-black text-slate-900">
-              ₹{(250000).toLocaleString()}
-            </span>
-            <span className="text-xs text-purple-700 font-bold">Committed CSR</span>
-          </div>
-          <p className="mt-1 text-[11px] text-slate-500">
+
+          <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-500">
             Section 135 Schedule VII Compliant
           </p>
         </div>
-      </div>
+      </section>
 
-      {/* Recommended Opportunities Matching Capabilities */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      {/* =========================================================
+          RECOMMENDED INNOVATION OPPORTUNITIES
+      ========================================================== */}
+      <section className="space-y-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">
-              Recommended Innovation Opportunities
-            </h2>
-            <p className="text-xs text-slate-500">
-              Projects matched automatically with {activeIndustry?.organization_name || 'Industry'}'s registered testing and manufacturing matrix.
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-1 rounded-full bg-emerald-500" />
+
+              <h2 className="text-lg font-black tracking-tight text-slate-950">
+                Recommended Innovation Opportunities
+              </h2>
+            </div>
+
+            <p className="mt-1.5 pl-3 text-xs text-slate-500">
+              Real societal challenges currently available for industry
+              collaboration.
             </p>
           </div>
 
           <button
+            type="button"
             onClick={() => setCurrentView('industry-discovery')}
-            className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1"
+            className="group inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-extrabold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-900"
           >
-            Explore All Catalog ({projects.length})
-            <ChevronRight className="w-3.5 h-3.5" />
+            Explore All Catalog ({industryChallenges.length})
+            <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {recommendedProjects.map((project) => (
-            <div
-              key={project.id}
-              className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-emerald-400/80 hover:shadow-md transition flex flex-col justify-between p-5 space-y-4"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800">
-                    {project.currentStage || 'Prototype'} Stage
-                  </span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {project.district || 'Khunti'}
-                  </span>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {recommendedChallenges.length > 0 ? (
+            recommendedChallenges.map((challenge) => (
+              <div
+                key={challenge.id}
+                className="group flex min-h-[360px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
+              >
+                <div className="flex-1 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-emerald-800">
+                      {challenge.status}
+                    </span>
+
+                    <span className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-slate-400">
+                      <MapPin className="h-3 w-3" />
+                      {challenge.district || 'Jharkhand'}
+                    </span>
+                  </div>
+
+                  <div className="mt-4">
+                    <h3 className="line-clamp-2 min-h-[40px] text-sm font-extrabold leading-snug text-slate-950">
+                      {challenge.title}
+                    </h3>
+
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                      <Building2 className="h-3 w-3 shrink-0 text-slate-400" />
+
+                      <span className="truncate">
+                        {challenge.category}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 line-clamp-3 min-h-[51px] text-[11px] leading-relaxed text-slate-600">
+                    {challenge.problemSummary ||
+                      challenge.description ||
+                      'Societal challenge requiring collaborative innovation.'}
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    <span className="rounded-md bg-purple-50 px-2 py-1 text-[9px] font-bold text-purple-700">
+                      {challenge.urgency} Urgency
+                    </span>
+
+                    <span className="rounded-md bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-700">
+                      {challenge.affectedPopulation.toLocaleString()}{' '}
+                      Affected
+                    </span>
+                  </div>
+
+                  {challenge.assignedUniversityName && (
+                    <div className="mt-4 flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-2 text-[10px] text-slate-500">
+                      <Building2 className="h-3 w-3 shrink-0 text-emerald-600" />
+
+                      <span className="truncate">
+                        University: {challenge.assignedUniversityName}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <h3
-                    onClick={() => handleOpenDetail(project.id)}
-                    className="text-sm font-bold text-slate-900 hover:text-emerald-700 cursor-pointer transition leading-snug line-clamp-2"
+                <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('industry-discovery')}
+                    className="rounded-lg px-2 py-1.5 text-[10px] font-extrabold text-slate-600 transition hover:bg-white hover:text-slate-950"
                   >
-                    {project.title || project.proposal?.title || project.challengeTitle}
-                  </h3>
-                  <div className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                    <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
-                    <span className="truncate">{project.universityName || project.university?.name || 'Partner University'}</span>
+                    View Details
+                  </button>
+
+                  {/* BLUE COLLABORATE BUTTON */}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentView('industry-discovery')}
+                    disabled={
+                      !currentIndustryMember?.permissions
+                        ?.canExpressCollaboration
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-[10px] font-extrabold text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Handshake className="h-3.5 w-3.5" />
+                    Collaborate
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : recommendedProjects.length > 0 ? (
+            recommendedProjects.map((project) => (
+              <div
+                key={project.id}
+                className="group flex min-h-[360px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
+              >
+                <div className="flex-1 p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-emerald-800">
+                      {project.currentStage || 'Active'}
+                    </span>
+
+                    <span className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-slate-400">
+                      <MapPin className="h-3 w-3" />
+                      {project.district || 'Jharkhand'}
+                    </span>
+                  </div>
+
+                  <div className="mt-4">
+                    <h3 className="line-clamp-2 min-h-[40px] text-sm font-extrabold leading-snug text-slate-950">
+                      {project.title ||
+                        project.proposal?.title ||
+                        project.challengeTitle ||
+                        'Innovation Project'}
+                    </h3>
+
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-slate-500">
+                      <Building2 className="h-3 w-3 shrink-0 text-slate-400" />
+
+                      <span className="truncate">
+                        {project.universityName ||
+                          project.university?.name ||
+                          'University Partner'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 line-clamp-3 min-h-[51px] text-[11px] leading-relaxed text-slate-600">
+                    {project.summary ||
+                      project.proposal?.executiveSummary ||
+                      project.proposal?.proposedSolution ||
+                      'Collaborative innovation project.'}
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    <span className="rounded-md bg-purple-50 px-2 py-1 text-[9px] font-bold text-purple-700">
+                      Tooling & Fab Needed
+                    </span>
+
+                    <span className="rounded-md bg-emerald-50 px-2 py-1 text-[9px] font-bold text-emerald-700">
+                      Pressure Testing Rig
+                    </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                  {project.summary || project.proposal?.executiveSummary || project.proposal?.proposedSolution || 'Societal challenge solving innovation in Jharkhand.'}
-                </p>
+                <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-3.5">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenProjectDetail(project.id)}
+                    className="rounded-lg px-2 py-1.5 text-[10px] font-extrabold text-slate-600 transition hover:bg-white hover:text-slate-950"
+                  >
+                    View Details
+                  </button>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-1 pt-1">
-                  <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-semibold">
-                    Tooling & Fab Needed
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
-                    Pressure Testing Rig
-                  </span>
+                  {/* BLUE EXPRESS INTEREST BUTTON */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedExpressProject(project)}
+                    disabled={
+                      !currentIndustryMember?.permissions
+                        ?.canExpressCollaboration
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-[10px] font-extrabold text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Handshake className="h-3.5 w-3.5" />
+                    Express Interest
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <button
-                  onClick={() => handleOpenDetail(project.id)}
-                  className="text-xs font-bold text-slate-600 hover:text-slate-900"
-                >
-                  View Details
-                </button>
-                <button
-                  onClick={() => setSelectedExpressProject(project)}
-                  disabled={!currentIndustryMember?.permissions?.canExpressCollaboration}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1 transition"
-                >
-                  <Handshake className="w-3.5 h-3.5" />
-                  Express Interest
-                </button>
+            ))
+          ) : (
+            <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <Search className="h-5 w-5" />
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Active Collaborations & Health Stream */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Active Co-Dev Workspaces */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900">
-              Active Co-Development Workspaces
-            </h3>
+              <h3 className="mt-4 text-sm font-extrabold text-slate-950">
+                No innovation opportunities available yet
+              </h3>
+
+              <p className="mx-auto mt-1.5 max-w-md text-[11px] leading-relaxed text-slate-500">
+                Verified societal challenges and academic projects will
+                appear here when they become available for industry
+                collaboration.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setCurrentView('industry-discovery')}
+                className="mt-5 rounded-lg bg-emerald-600 px-4 py-2.5 text-[10px] font-extrabold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                Open Discovery
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* =========================================================
+          ACTIVE COLLABORATIONS + QUICK LAUNCHPADS
+      ========================================================== */}
+      <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        {/* Active Co-Development Workspaces */}
+        <div className="space-y-4 lg:col-span-2">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-1 rounded-full bg-emerald-500" />
+
+                <h3 className="text-base font-black tracking-tight text-slate-950">
+                  Active Co-Development Workspaces
+                </h3>
+              </div>
+
+              <p className="mt-1 pl-3 text-[10px] text-slate-500">
+                Monitor ongoing university-industry execution.
+              </p>
+            </div>
+
             <button
+              type="button"
               onClick={() => setCurrentView('industry-collaborations')}
-              className="text-xs font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1"
+              className="group inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-extrabold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-900"
             >
               View Workspaces
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </button>
           </div>
 
           {activeCollabs.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-xs text-slate-500">
-              No active collaborations currently in progress. Browse projects to partner.
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-[11px] text-slate-500 shadow-sm">
+              No active collaborations currently in progress. Browse
+              opportunities to partner.
             </div>
           ) : (
             <div className="space-y-4">
               {activeCollabs.map((collab) => (
                 <div
                   key={collab.id}
-                  className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-emerald-400 transition space-y-3"
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-emerald-100 px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-emerald-800">
                           Active Co-Development
                         </span>
-                        <span className="text-xs text-slate-400">
+
+                        <span className="text-[10px] font-medium text-slate-400">
                           {collab.university_name}
                         </span>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-900">
+
+                      <h4 className="mt-2 text-sm font-extrabold text-slate-950">
                         {collab.project_title}
                       </h4>
                     </div>
 
+                    {/* BLUE WORKSPACE BUTTON */}
                     <button
-                      onClick={() => handleOpenWorkspace(collab.id, collab.project_id)}
-                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 shrink-0"
+                      type="button"
+                      onClick={() =>
+                        handleOpenWorkspace(
+                          collab.id,
+                          collab.project_id
+                        )
+                      }
+                      className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-[10px] font-extrabold text-white shadow-sm shadow-blue-100 transition hover:bg-blue-700"
                     >
                       Workspace
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="h-3.5 w-3.5" />
                     </button>
                   </div>
 
-                  {/* Progress bar */}
-                  <div className="space-y-1 pt-1">
-                    <div className="flex justify-between text-xs text-slate-600 font-medium">
+                  <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+                    <div className="flex items-center justify-between gap-3 text-[10px] font-semibold text-slate-600">
                       <span>Joint Execution Progress</span>
-                      <span className="font-bold text-emerald-700">{collab.progress_percent}%</span>
+
+                      <span className="font-extrabold text-emerald-700">
+                        {collab.progress_percent}%
+                      </span>
                     </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                       <div
-                        className="h-full bg-emerald-500 rounded-full"
-                        style={{ width: `${collab.progress_percent}%` }}
+                        className="h-full rounded-full bg-emerald-500 transition-all"
+                        style={{
+                          width: `${collab.progress_percent}%`,
+                        }}
                       />
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1">
+                  <div className="mt-3 flex flex-col gap-1 text-[10px] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                     <span>
-                      Contributions logged: <strong>{collab.contributions?.length || 0}</strong>
+                      Contributions logged:{' '}
+                      <strong className="text-slate-700">
+                        {collab.contributions?.length || 0}
+                      </strong>
                     </span>
+
                     <span>
-                      Lead: <strong>{collab.contact_person}</strong>
+                      Lead:{' '}
+                      <strong className="text-slate-700">
+                        {collab.contact_person}
+                      </strong>
                     </span>
                   </div>
                 </div>
@@ -363,71 +629,119 @@ export const IndustryDashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Right 1 Col: Quick Action Launchpads & Verification */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">Quick Launchpads</h3>
+        {/* Quick Launchpads */}
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-black text-slate-950">
+                  Quick Launchpads
+                </h3>
 
-            <div className="space-y-2 text-xs">
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Frequently used industry actions
+                </p>
+              </div>
+
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                <Search className="h-4 w-4" />
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
               <button
+                type="button"
                 onClick={() => setCurrentView('industry-discovery')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-left font-bold text-slate-800 flex items-center justify-between transition"
+                className="group flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/40"
               >
-                <div className="flex items-center gap-2.5">
-                  <Search className="w-4 h-4 text-emerald-600" />
-                  <span>Discover Research Projects</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <Search className="h-4 w-4" />
+                  </div>
+
+                  <span className="text-[10px] font-extrabold text-slate-800">
+                    Discover Research Projects
+                  </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+
+                <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
               </button>
 
               <button
+                type="button"
                 onClick={() => setCurrentView('industry-requests')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-left font-bold text-slate-800 flex items-center justify-between transition"
+                className="group flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/40"
               >
-                <div className="flex items-center gap-2.5">
-                  <Handshake className="w-4 h-4 text-emerald-600" />
-                  <span>Track Partnership Proposals</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <Handshake className="h-4 w-4" />
+                  </div>
+
+                  <span className="text-[10px] font-extrabold text-slate-800">
+                    Track Partnership Proposals
+                  </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+
+                <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
               </button>
 
               <button
+                type="button"
                 onClick={() => setCurrentView('industry-funding')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-left font-bold text-slate-800 flex items-center justify-between transition"
+                className="group flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/40"
               >
-                <div className="flex items-center gap-2.5">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
-                  <span>Allocate CSR Grants</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <DollarSign className="h-4 w-4" />
+                  </div>
+
+                  <span className="text-[10px] font-extrabold text-slate-800">
+                    Allocate CSR Grants
+                  </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+
+                <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
               </button>
 
               <button
+                type="button"
                 onClick={() => setCurrentView('industry-reports')}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-left font-bold text-slate-800 flex items-center justify-between transition"
+                className="group flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50/40"
               >
-                <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Review Authorized Reports</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+
+                  <span className="text-[10px] font-extrabold text-slate-800">
+                    Review Authorized Reports
+                  </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+
+                <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           </div>
 
-          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-xs space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-              <Building2 className="w-4 h-4" />
+          {/* Council Information */}
+          <div className="rounded-2xl bg-slate-900 p-5 text-white shadow-sm">
+            <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">
+              <Building2 className="h-4 w-4" />
               State Higher Education Council
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Every partnership expression is logged under the official Department of Higher Education public-private co-development charter with zero licensing ambiguity.
+
+            <p className="mt-3 text-[10px] leading-relaxed text-slate-300">
+              Every partnership expression is logged under the official
+              Department of Higher Education public-private co-development
+              charter with zero licensing ambiguity.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Express Interest Modal */}
+      {/* =========================================================
+          EXISTING EXPRESS INTEREST MODAL
+      ========================================================== */}
       {selectedExpressProject && (
         <IndustryExpressInterestModal
           project={selectedExpressProject}
