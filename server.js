@@ -138,8 +138,6 @@ function buildOtpEmail(otp) {
         
         <!-- TOP HEADER -->
         <tr><td align="center" style="padding:40px 30px 20px;">
-          <!-- Jharkhand Logo using CID attachment -->
-          <img src="cid:jharkhand-logo" alt="Jharkhand Logo" width="100" style="display:inline-block;margin-bottom:10px;" />
           <div style="font-size:12px;color:#10253D;font-weight:bold;">सत्यमेव जयते</div>
           <div style="height:2px;background:#C79A32;width:40px;margin:20px auto 0;"></div>
         </td></tr>
@@ -233,24 +231,12 @@ async function sendOtpEmail(toEmail, otp) {
   }
 
   try {
-    const logoPath = path.join(__dirname, 'src', 'assets', 'images', 'Jharkhand logo.jpg');
-    const copyIconPath = path.join(__dirname, 'src', 'assets', 'images', 'copy-icon.png');
-
     const info = await transporter.sendMail({
       from: { name: senderName, address: fromAddress },
       to: toEmail,
       subject,
       text,
-      html,
-      attachments: [
-        {
-          filename: 'jharkhand-logo.jpg',
-          path: logoPath,
-          cid: 'jharkhand-logo',
-          contentType: 'image/jpeg',
-          contentDisposition: 'inline'
-        }
-      ]
+      html
     });
     if (!info.rejected || info.rejected.length === 0) {
       console.log(`✓ Email sent via SMTP to ${toEmail}`);

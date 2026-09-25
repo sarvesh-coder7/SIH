@@ -46,7 +46,7 @@ export const AuthModal: React.FC = () => {
       });
       if (res.user) {
         setCurrentUser(res.user as any);
-        switchRole(res.user.role);
+        setCurrentView('citizen-dashboard');
       }
     } else {
       switchRole(regRole);

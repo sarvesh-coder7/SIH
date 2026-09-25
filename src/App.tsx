@@ -1,7 +1,6 @@
 import React from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/common/Header';
-import { Footer } from './components/common/Footer';
 import { ToastProvider } from './context/ToastContext';
 import { AuthModal } from './components/common/AuthModal';
 import { AIChatWidget } from './components/ai/AIChatWidget';
@@ -290,7 +289,6 @@ const AppContent: React.FC = () => {
           {currentView === 'signup' && <SignUpPage initialRole={currentRole} />}
           {currentView === 'about' && <AboutPage />}
         </main>
-        {currentView !== 'landing' && currentView !== 'role-selection' && currentView !== 'about' && currentView !== 'signup' && currentView !== 'login' && <Footer />}
         <AuthModal />
       </div>
     );
@@ -355,9 +353,6 @@ const AppContent: React.FC = () => {
 
       {/* Global Alerts & Modals */}
       <AuthModal />
-
-      {/* Footer */}
-      {currentView !== 'universities' && !currentView.startsWith('university') && !currentView.startsWith('student') && <Footer />}
     </div>
   );
 };

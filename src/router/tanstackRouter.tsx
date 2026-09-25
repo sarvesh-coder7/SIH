@@ -14,7 +14,6 @@ import {
 import { ToastProvider } from '../context/ToastContext';
 import { AppProvider, useApp, AppView } from '../context/AppContext';
 import { Header } from '../components/common/Header';
-import { Footer } from '../components/common/Footer';
 
 import { ToastContainer } from '../components/common/ToastContainer';
 import { AuthModal } from '../components/common/AuthModal';
@@ -121,7 +120,6 @@ const PortalLayoutWrapper: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <Outlet />
       </main>
-      {!isUniversityPage && <Footer />}
     </div>
   );
 };

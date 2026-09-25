@@ -227,7 +227,6 @@ export const RoleSelectionPage: React.FC = () => {
         setIsAuthPanelOpen(false);
         requestAnimationFrame(() => {
           setCurrentUser(res.user as any);
-          switchRole(selectedRole.role);
           showToast('success', 'Authentication Successful', res.message);
           const target = selectedRole.targetView || (res.user?.role === 'citizen' ? 'citizen-dashboard' : 'role-selection');
           setCurrentView(target as any);
@@ -716,7 +715,6 @@ export const RoleSelectionPage: React.FC = () => {
                 requestAnimationFrame(() => {
                   const authedUser = authService.getCurrentUser();
                   setCurrentUser(authedUser as any);
-                  switchRole(role);
 
                   let dashboardView = 'citizen-dashboard';
                   if (role === 'university_admin') dashboardView = 'university-dashboard';

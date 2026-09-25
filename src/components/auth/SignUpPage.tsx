@@ -214,7 +214,6 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
-        switchRole('university_admin');
         showToast('success', 'Institutional Onboarding Complete', res.message);
         setCurrentView('university-dashboard');
       }
@@ -258,7 +257,6 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
-        switchRole('faculty_mentor');
         showToast('success', 'Faculty Profile Created', res.message);
         setCurrentView('university-proposals');
       }
@@ -309,7 +307,6 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
-        switchRole('csr_org');
         showToast('success', 'Industry Partner Profile Created', res.message);
         setCurrentView('industry-dashboard');
       }
@@ -355,7 +352,6 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
         showToast('info', 'Verification Required', 'A verification code has been sent to your email.');
       } else {
         setCurrentUser(res.user as any);
-        switchRole('industry_msme');
         showToast('success', 'Startup Profile Registered', res.message);
         setCurrentView('industry-dashboard');
       }
@@ -1242,7 +1238,6 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
             requestAnimationFrame(() => {
               const authedUser = authService.getCurrentUser();
               setCurrentUser(authedUser as any);
-              switchRole(role);
               
               let dashboardView = 'citizen-dashboard';
               if (role === 'university_admin') dashboardView = 'university-dashboard';

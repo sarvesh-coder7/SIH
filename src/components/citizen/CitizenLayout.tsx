@@ -1,7 +1,6 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { JharkhandEmblem } from '../common/JharkhandEmblem';
-import { Footer } from '../common/Footer';
 import {
   LayoutDashboard,
   PlusCircle,
@@ -300,9 +299,6 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
         {/* Main Content Pane */}
         <main className="flex-1 min-w-0 py-6 overflow-y-auto pb-24 lg:pb-8">
           {children}
-          <div className="mt-8">
-            <Footer />
-          </div>
         </main>
       </div>
 
