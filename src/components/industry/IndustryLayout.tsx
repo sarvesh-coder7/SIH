@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { IndustryDashboard } from './IndustryDashboard';
@@ -433,15 +434,15 @@ export const IndustryLayout: React.FC = () => {
         <div className="px-4 pb-4 pt-2 shrink-0">
           <div className="relative">
 
-            <button
-              type="button"
-              onClick={() =>
-                setRoleDropdownOpen((prev) => !prev)
-              }
-              className="w-full p-3 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 shadow-sm text-left flex items-center justify-between transition"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-full p-3 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
 
+              {/* PROFILE SHORTCUT */}
+              <button
+                type="button"
+                onClick={() => navigate('industry-profile')}
+                className="flex items-center gap-2.5 min-w-0 flex-1 text-left rounded-xl hover:bg-slate-50 transition p-1.5 -ml-1.5"
+                title="Open Organization Profile"
+              >
                 <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 font-black text-xs flex items-center justify-center shrink-0">
                   {currentIndustryMember?.name?.charAt(0) || 'P'}
                 </div>
@@ -460,14 +461,25 @@ export const IndustryLayout: React.FC = () => {
                     )}
                   </div>
                 </div>
-              </div>
+              </button>
 
-              <ChevronDown
-                className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${
-                  roleDropdownOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
+              {/* ROLE DROPDOWN BUTTON */}
+              <button
+                type="button"
+                onClick={() =>
+                  setRoleDropdownOpen((prev) => !prev)
+                }
+                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition shrink-0"
+                aria-label="Switch active role"
+                title="Switch active role"
+              >
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-400 transition-transform ${
+                    roleDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+            </div>
 
             {/* ROLE DROPDOWN */}
             {roleDropdownOpen && (
@@ -578,8 +590,13 @@ export const IndustryLayout: React.FC = () => {
               )}
             </button>
 
-            <div className="hidden md:flex items-center gap-3 pl-3 border-l border-slate-200 max-w-[280px]">
-
+            {/* TOP-RIGHT PROFILE SHORTCUT */}
+            <button
+              type="button"
+              onClick={() => navigate('industry-profile')}
+              className="hidden md:flex items-center gap-3 pl-3 border-l border-slate-200 max-w-[280px] text-left rounded-xl hover:bg-slate-50 transition p-1.5"
+              title="Open Organization Profile"
+            >
               <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 font-black text-xs shrink-0">
                 {currentIndustryMember?.name?.charAt(0) || 'P'}
               </div>
@@ -598,7 +615,7 @@ export const IndustryLayout: React.FC = () => {
                   )}
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </header>
 
