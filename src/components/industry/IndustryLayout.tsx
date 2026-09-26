@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { IndustryDashboard } from './IndustryDashboard';
@@ -295,7 +294,11 @@ export const IndustryLayout: React.FC = () => {
           </div>
 
           {/* ORGANIZATION CARD */}
-          <div className="mt-5 rounded-2xl bg-white border border-slate-200 shadow-sm p-4">
+          <button
+            type="button"
+            onClick={() => navigate('industry-profile')}
+            className="mt-5 w-full text-left rounded-2xl bg-white border border-slate-200 shadow-sm p-4 hover:border-blue-200 hover:bg-blue-50/30 transition cursor-pointer"
+          >
             <div className="text-[9px] uppercase tracking-[0.12em] font-bold text-slate-500">
               Affiliated Enterprise
             </div>
@@ -312,7 +315,7 @@ export const IndustryLayout: React.FC = () => {
                 State Verified Industry Partner
               </span>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* NAVIGATION */}
@@ -436,11 +439,11 @@ export const IndustryLayout: React.FC = () => {
 
             <div className="w-full p-3 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-between">
 
-              {/* PROFILE SHORTCUT */}
+              {/* PROFILE AREA */}
               <button
                 type="button"
                 onClick={() => navigate('industry-profile')}
-                className="flex items-center gap-2.5 min-w-0 flex-1 text-left rounded-xl hover:bg-slate-50 transition p-1.5 -ml-1.5"
+                className="flex items-center gap-2.5 min-w-0 flex-1 text-left rounded-xl hover:bg-slate-50 transition p-1 -ml-1 cursor-pointer"
                 title="Open Organization Profile"
               >
                 <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 font-black text-xs flex items-center justify-center shrink-0">
@@ -469,7 +472,7 @@ export const IndustryLayout: React.FC = () => {
                 onClick={() =>
                   setRoleDropdownOpen((prev) => !prev)
                 }
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition shrink-0"
+                className="p-2 rounded-xl hover:bg-slate-100 transition cursor-pointer shrink-0"
                 aria-label="Switch active role"
                 title="Switch active role"
               >
@@ -575,6 +578,7 @@ export const IndustryLayout: React.FC = () => {
           {/* HEADER RIGHT */}
           <div className="flex items-center gap-2.5 shrink-0">
 
+            {/* NOTIFICATIONS */}
             <button
               type="button"
               onClick={() =>
@@ -590,11 +594,11 @@ export const IndustryLayout: React.FC = () => {
               )}
             </button>
 
-            {/* TOP-RIGHT PROFILE SHORTCUT */}
+            {/* TOP RIGHT PROFILE */}
             <button
               type="button"
               onClick={() => navigate('industry-profile')}
-              className="hidden md:flex items-center gap-3 pl-3 border-l border-slate-200 max-w-[280px] text-left rounded-xl hover:bg-slate-50 transition p-1.5"
+              className="hidden md:flex items-center gap-3 pl-3 border-l border-slate-200 max-w-[280px] text-left rounded-xl hover:bg-slate-50 py-1.5 pr-2 transition cursor-pointer"
               title="Open Organization Profile"
             >
               <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 font-black text-xs shrink-0">
@@ -621,7 +625,7 @@ export const IndustryLayout: React.FC = () => {
 
         {/* ROUTED CONTENT */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-28">
-          <div className="max-w-full w-full mx-auto">
+          <div className="max-w-7xl w-full mx-auto">
             <ErrorBoundary fallbackTitle="Industry Hub Module">
               {renderContent()}
             </ErrorBoundary>
