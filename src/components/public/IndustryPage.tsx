@@ -100,3 +100,4 @@ export const IndustryPage: React.FC = () => {
     </div>
   );
 };
+

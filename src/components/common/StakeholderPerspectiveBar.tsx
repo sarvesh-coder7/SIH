@@ -139,3 +139,4 @@ export const StakeholderPerspectiveBar: React.FC<StakeholderPerspectiveBarProps>
     </div>
   );
 };
+

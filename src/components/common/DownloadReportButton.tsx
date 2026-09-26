@@ -105,3 +105,4 @@ export const DownloadReportButton: React.FC<DownloadReportButtonProps> = ({
     </button>
   );
 };
+

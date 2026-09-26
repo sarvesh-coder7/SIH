@@ -204,3 +204,4 @@ export const getRouteViewInfo = (pathname: string): { view: AppView; challengeId
 
   return { view: 'landing' };
 };
+

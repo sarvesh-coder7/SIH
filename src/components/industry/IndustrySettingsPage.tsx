@@ -122,3 +122,4 @@ export const IndustrySettingsPage: React.FC = () => {
     </div>
   );
 };
+

@@ -632,3 +632,4 @@ export const IndustryCollaborationWorkspace: React.FC = () => {
     </div>
   );
 };
+

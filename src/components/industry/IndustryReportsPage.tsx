@@ -290,3 +290,4 @@ export const IndustryReportsPage: React.FC = () => {
     </div>
   );
 };
+

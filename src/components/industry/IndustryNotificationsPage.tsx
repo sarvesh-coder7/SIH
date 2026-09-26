@@ -72,3 +72,4 @@ export const IndustryNotificationsPage: React.FC = () => {
     </div>
   );
 };
+

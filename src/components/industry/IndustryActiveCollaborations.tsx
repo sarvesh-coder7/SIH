@@ -165,3 +165,4 @@ export const IndustryActiveCollaborations: React.FC = () => {
     </div>
   );
 };
+

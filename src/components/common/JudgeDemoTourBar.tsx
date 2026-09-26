@@ -44,7 +44,7 @@ export const JudgeDemoTourBar: React.FC = () => {
 
   return (
     <div className="bg-[#0d5c3a] text-white border-b border-[#0a482e] shadow-md sticky top-[57px] z-30 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-2">
         {/* Step Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           {/* Left badge & title */}
@@ -134,3 +134,4 @@ export const JudgeDemoTourBar: React.FC = () => {
     </div>
   );
 };
+

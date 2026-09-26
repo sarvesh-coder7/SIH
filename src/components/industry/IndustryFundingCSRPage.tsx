@@ -272,3 +272,4 @@ export const IndustryFundingCSRPage: React.FC = () => {
     </div>
   );
 };
+

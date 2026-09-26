@@ -164,3 +164,4 @@ export const CitizenNotificationsPage: React.FC = () => {
     </div>
   );
 };
+

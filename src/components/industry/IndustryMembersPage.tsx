@@ -331,3 +331,4 @@ export const IndustryMembersPage: React.FC = () => {
     </div>
   );
 };
+

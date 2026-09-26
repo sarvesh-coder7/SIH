@@ -333,3 +333,4 @@ export const UniversitySettingsPage: React.FC = () => {
     </div>
   );
 };
+

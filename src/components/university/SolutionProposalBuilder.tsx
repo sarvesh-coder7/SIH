@@ -216,3 +216,4 @@ export const SolutionProposalBuilder: React.FC<SolutionProposalBuilderProps> = (
     </form>
   );
 };
+

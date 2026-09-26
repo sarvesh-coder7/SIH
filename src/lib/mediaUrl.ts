@@ -99,3 +99,4 @@ export function getMediaType(url: string): 'image' | 'video' | 'unknown' {
   if (/\.(mp4|webm|mov|avi|mkv|ogg)$/.test(lower)) return 'video';
   return 'unknown';
 }
+

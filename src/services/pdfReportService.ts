@@ -825,3 +825,4 @@ export async function generateProblemReport(challenge: Challenge): Promise<void>
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
+

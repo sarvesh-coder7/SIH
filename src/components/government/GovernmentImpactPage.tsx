@@ -164,3 +164,4 @@ export const GovernmentImpactPage: React.FC = () => {
     </div>
   );
 };
+

@@ -214,6 +214,7 @@ export const GovernmentLayout: React.FC = () => {
 
   return (
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
+<<<<<<< HEAD
       {/* Mobile Top Bar (hidden on desktop) */}
       <div className="lg:hidden shrink-0 bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between z-30 shadow-xs">
         <button
@@ -227,6 +228,135 @@ export const GovernmentLayout: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-700 flex items-center justify-center text-amber-300 shadow-xs">
             <ShieldCheck className="w-4 h-4" />
+=======
+      {/* Official State Header */}
+      <header className="shrink-0 bg-slate-900 text-white border-b border-slate-800 z-30 shadow-md">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left: Branding */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none"
+                aria-label="Toggle Navigation Menu"
+              >
+                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+
+              <div
+                onClick={() => setCurrentView('government-dashboard')}
+                className="flex items-center gap-3 cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 flex items-center justify-center text-amber-300 shadow-md border border-emerald-500/30">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold tracking-wider uppercase text-emerald-400">
+                      झारखंड सरकार • Govt of Jharkhand
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${currentLevelInfo.bg} ${currentLevelInfo.color}`}>
+                      {accessLevel.toUpperCase()}
+                    </span>
+                  </div>
+                  <h1 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
+                    JH Innovation Connect — Government Portal
+                  </h1>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Access Level Switcher & User Profile */}
+            <div className="flex items-center gap-3">
+              {/* Quick Access Switcher Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-lg text-xs text-slate-200 transition-colors"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <div className="text-left">
+                    <div className="font-semibold truncate max-w-[150px]">
+                      {currentGovernmentMember.name}
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate max-w-[150px]">
+                      {currentGovernmentMember.designation}
+                    </div>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+                </button>
+
+                {roleDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 py-2 z-50 text-slate-800">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                        Switch Government Official / Access Scope
+                      </div>
+                      <div className="text-xs text-slate-600 mt-0.5">
+                        Test different permissions across State, Department, District, & Field levels.
+                      </div>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                      {governmentMembers.map((member) => (
+                        <button
+                          key={member.id}
+                          onClick={() => {
+                            switchGovernmentMember(member.id);
+                            setRoleDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors flex items-start gap-3 ${
+                            member.id === currentGovernmentMember.id ? 'bg-emerald-50/70' : ''
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs text-slate-700 shrink-0 mt-0.5">
+                            {member.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-bold text-slate-900 truncate">
+                                {member.name}
+                              </span>
+                              <span
+                                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                  accessLevelLabels[member.access_level]?.bg || 'bg-slate-100'
+                                } ${accessLevelLabels[member.access_level]?.color || 'text-slate-700'}`}
+                              >
+                                {member.access_level}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-600 truncate">{member.designation}</div>
+                            <div className="text-[10px] text-slate-400 truncate">{member.department_name}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Public Portal Switcher */}
+              <button
+                onClick={() => setCurrentView('landing')}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/50 rounded-lg text-xs font-semibold text-emerald-300 transition-colors"
+                title="View Public Community Portal"
+              >
+                <span>Public Portal</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={logout}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                title="Sign out of Government Portal"
+                aria-label="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+>>>>>>> f0eac6ede790927527c5d5c5bad7df79646a587b
           </div>
           <span className="font-bold text-xs text-slate-800">JH Innovation Connect</span>
         </div>
@@ -240,10 +370,10 @@ export const GovernmentLayout: React.FC = () => {
       </div>
 
       {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 overflow-hidden items-stretch">
+      <div className="flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 overflow-hidden items-stretch">
         {/* Navigation Sidebar */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 p-4 my-6 overflow-y-auto shrink-0 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:rounded-2xl lg:shadow-xs lg:border pt-sidebar-enter ${
+          className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 p-4 my-6 overflow-y-auto shrink-0 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:rounded-2xl lg:shadow-xs lg:border pt-sidebar-enter flex flex-col ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -398,8 +528,13 @@ export const GovernmentLayout: React.FC = () => {
             })}
           </nav>
 
+<<<<<<< HEAD
           {/* Secondary Links & Actions */}
           <div className="pt-4 mt-4 border-t border-slate-200 space-y-1">
+=======
+          {/* Secondary Links */}
+          <div className="pt-4 mt-auto border-t border-slate-200 space-y-1">
+>>>>>>> f0eac6ede790927527c5d5c5bad7df79646a587b
             <button
               onClick={() => {
                 setCurrentView('government-help');
@@ -465,3 +600,4 @@ export const GovernmentLayout: React.FC = () => {
     </div>
   );
 };
+

@@ -1257,3 +1257,4 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({
     </div>
   );
 };
+

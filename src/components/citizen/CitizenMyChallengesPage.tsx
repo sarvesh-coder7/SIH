@@ -600,3 +600,4 @@ export const CitizenMyChallengesPage: React.FC = () => {
     </div>
   );
 };
+

@@ -403,3 +403,4 @@ export const UniversityChallengesPage: React.FC = () => {
     </div>
   );
 };
+

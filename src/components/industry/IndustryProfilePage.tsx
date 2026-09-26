@@ -543,3 +543,4 @@ const CapabilityCard: React.FC<CapabilityCardProps> = ({
     </div>
   );
 };
+

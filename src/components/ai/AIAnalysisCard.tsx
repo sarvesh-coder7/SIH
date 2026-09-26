@@ -191,3 +191,4 @@ export const AIAnalysisCard: React.FC<AIAnalysisCardProps> = ({ analysis, compac
     </div>
   );
 };
+

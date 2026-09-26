@@ -283,3 +283,4 @@ export const UniversityProjectsPage: React.FC = () => {
     </div>
   );
 };
+

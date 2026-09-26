@@ -124,3 +124,4 @@ export const LifecycleTimeline: React.FC<LifecycleTimelineProps> = ({ currentSta
     </div>
   );
 };
+

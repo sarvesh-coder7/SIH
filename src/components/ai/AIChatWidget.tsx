@@ -681,27 +681,28 @@ export const AIChatWidget: React.FC = () => {
         onClick={() => setIsOpen(!isOpen)}
         title="SolveSphere AI Chatbot"
         aria-label="Toggle SolveSphere AI Chatbot"
-        className="group flex items-center gap-2.5 px-4 py-3 bg-[#0d5c3a] hover:bg-[#0b4d30] text-white font-bold rounded-full shadow-2xl border border-emerald-500/50 hover:border-emerald-400 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-4 ring-emerald-500/20 select-none"
+        className="group flex items-center gap-2.5 px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-800 font-bold rounded-full shadow-xl border border-slate-200/90 hover:border-emerald-300 transition-all transform hover:scale-105 active:scale-95 cursor-pointer select-none"
       >
         <div className="relative">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white shadow-xs">
-            {isOpen ? <X className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+          <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 shadow-xs">
+            {isOpen ? <X className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
           </div>
           {!isOpen && (
             <>
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-amber-400 rounded-full" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-ping opacity-75" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full" />
             </>
           )}
         </div>
         <div className="text-left hidden sm:block pr-1">
-          <div className="text-xs font-extrabold text-white flex items-center gap-1">
-            <span>{isOpen ? 'Close Chat' : 'Ask AI'}</span>
-            <Sparkles className="w-3 h-3 text-amber-300" />
+          <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+            <span>{isOpen ? 'Close' : 'Ask AI'}</span>
+            <Sparkles className="w-3 h-3 text-emerald-600" />
           </div>
-          <div className="text-[10px] text-emerald-100 font-normal">SolveSphere Copilot</div>
+          <div className="text-[9px] text-slate-500 font-medium leading-tight">SolveSphere Copilot</div>
         </div>
       </button>
     </div>
   );
 };
+

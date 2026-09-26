@@ -329,7 +329,7 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
 
       {/* Top Institutional Header */}
       <header className="shrink-0 z-30 w-full bg-white/95 backdrop-blur-md text-slate-900 border-b border-slate-200/80 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3 shrink-0">
             <button
@@ -611,13 +611,13 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
       </header>
 
       {/* Body with Desktop Sidebar + Main Content */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 lg:gap-8 overflow-hidden items-stretch">
+      <div className="flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 lg:gap-8 overflow-hidden items-stretch">
         {/* Desktop Sidebar (Fixed / Sticky Left Navigation) */}
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 space-y-4 py-6 overflow-y-auto pr-1">
+        <aside className="hidden lg:flex flex-col w-64 shrink-0 gap-4 py-6 overflow-y-auto pr-1">
           {/* Main University Navigation */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 p-3 shadow-2xs space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200/90 p-3 shadow-2xs flex-1 flex flex-col">
             {navItems.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-1">
+              <div key={gIdx} className="space-y-1 mb-4">
                 <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                   {group.group}
                 </div>
@@ -661,7 +661,7 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
 
 
             {/* Logout Divider */}
-            <div className="pt-2 border-t border-slate-100">
+            <div className="pt-2 border-t border-slate-100 mt-auto">
               <button
                 type="button"
                 onClick={handleLogout}
@@ -866,3 +866,4 @@ export const UniversityLayout: React.FC<UniversityLayoutProps> = ({ children }) 
     </div>
   );
 };
+

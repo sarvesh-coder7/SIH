@@ -295,3 +295,4 @@ export const IndustryTechnicalPage: React.FC = () => {
     </div>
   );
 };
+

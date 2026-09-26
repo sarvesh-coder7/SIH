@@ -256,7 +256,7 @@ export const RoleSelectionPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* 1. TOP HEADER (MATCHING SCREENSHOT 2) */}
       {/* ========================================================================= */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto flex items-center justify-between pb-2 border-b border-[#e2d6bc] shrink-0">
+      <div className="relative z-10 w-full max-w-full mx-auto flex items-center justify-between pb-2 border-b border-[#e2d6bc] shrink-0">
         {/* Left Brand */}
         <div
           onClick={() => setCurrentView('landing')}
@@ -733,3 +733,4 @@ export const RoleSelectionPage: React.FC = () => {
     </div>
   );
 };
+
