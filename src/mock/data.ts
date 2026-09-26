@@ -1,4 +1,4 @@
-﻿import {
+import {
   User,
   Challenge,
   ProjectLifecycle,
@@ -392,5 +392,6 @@ export const MOCK_OVERALL_STATS = {
   patentsFiled: 58,
   startupsIncubated: 27,
   citizensImpacted: 1485000,
-  csrFundingMobilizedINR: 194500000, // ₹19.45 Cr
+  csrFundingMobilizedINR: 194500000, // ?19.45 Cr
 };
+

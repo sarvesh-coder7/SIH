@@ -106,3 +106,4 @@ export const CitizenPrivacyPage: React.FC = () => {
     </div>
   );
 };
+

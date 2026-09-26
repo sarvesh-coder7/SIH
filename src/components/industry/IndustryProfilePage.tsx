@@ -313,3 +313,4 @@ export const IndustryProfilePage: React.FC = () => {
     </div>
   );
 };
+

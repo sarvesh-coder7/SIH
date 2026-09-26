@@ -291,3 +291,4 @@ export const ChallengeAttemptsHistory: React.FC<ChallengeAttemptsHistoryProps> =
     </div>
   );
 };
+

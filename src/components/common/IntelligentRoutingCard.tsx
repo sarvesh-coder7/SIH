@@ -119,3 +119,4 @@ export const IntelligentRoutingCard: React.FC<IntelligentRoutingCardProps> = ({
     </div>
   );
 };
+

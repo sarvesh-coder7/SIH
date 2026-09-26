@@ -207,11 +207,11 @@ export const CitizenDashboard: React.FC = () => {
 
 
   return (
-    <div className="space-y-8 font-sans-body">
+    <div className="space-y-6 font-sans-body">
       {/* ========================================================================= */}
       {/* 1. TOP GREETING & CTAs (MATCHING SECTION 4) */}
       {/* ========================================================================= */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300/60">
@@ -254,8 +254,8 @@ export const CitizenDashboard: React.FC = () => {
       {/* ========================================================================= */}
       {/* TRACK BY TRACKING ID WIDGET */}
       {/* ========================================================================= */}
-      <div className="bg-gradient-to-r from-emerald-900 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-md border border-emerald-700/40 relative overflow-hidden">
-        <div className="max-w-2xl space-y-2 relative z-10">
+      <div className="bg-gradient-to-r from-emerald-900 to-slate-900 text-white rounded-3xl p-4 sm:p-5 shadow-md border border-emerald-700/40 relative overflow-hidden">
+        <div className="max-w-2xl space-y-1.5 relative z-10">
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-slate-950 uppercase tracking-wider">
               Citizen Tracking Desk
@@ -268,7 +268,7 @@ export const CitizenDashboard: React.FC = () => {
             Track Problem Status by Reference ID
           </h2>
           <p className="text-xs text-emerald-100/90 leading-relaxed">
-            Enter your official Tracking ID (e.g., <code className="font-mono bg-white/10 px-1 py-0.5 rounded text-amber-300">JH-2026-XXXXXXXX</code>) to check live screening, university matching, and field pilot milestones.
+            Enter Tracking ID (e.g., <code className="font-mono bg-white/10 px-1 py-0.5 rounded text-amber-300">JH-2026-XXXXXXXX</code>) to check live milestones.
           </p>
           <form
             onSubmit={(e) => {
@@ -284,11 +284,11 @@ export const CitizenDashboard: React.FC = () => {
               value={trackingInput}
               onChange={(e) => setTrackingInput(e.target.value)}
               placeholder="e.g. JH-2026-..."
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white text-slate-900 text-xs font-mono font-bold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-inner"
+              className="flex-1 px-4 py-2 rounded-xl bg-white text-slate-900 text-xs font-mono font-bold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 shadow-inner"
             />
             <button
               type="submit"
-              className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-bold rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5 shrink-0 transition-all"
+              className="px-5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-bold rounded-xl shadow-md cursor-pointer flex items-center justify-center gap-1.5 shrink-0 transition-all"
             >
               <span>Track Status</span>
               <ArrowRight className="w-4 h-4" />
@@ -605,3 +605,4 @@ export const CitizenDashboard: React.FC = () => {
     </div>
   );
 };
+

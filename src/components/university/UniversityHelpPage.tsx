@@ -64,3 +64,4 @@ export const UniversityHelpPage: React.FC = () => {
     </div>
   );
 };
+

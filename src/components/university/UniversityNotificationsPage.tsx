@@ -294,3 +294,4 @@ export const UniversityNotificationsPage: React.FC = () => {
     </div>
   );
 };
+

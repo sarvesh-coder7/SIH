@@ -456,3 +456,4 @@ export const UniversityDashboard: React.FC = () => {
     </div>
   );
 };
+

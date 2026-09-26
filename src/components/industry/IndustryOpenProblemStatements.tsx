@@ -923,3 +923,4 @@ export const IndustryOpenProblemStatements: React.FC = () => {
     </div>
   );
 };
+

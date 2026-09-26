@@ -361,7 +361,7 @@ export const LandingPage: React.FC = () => {
           <div
             className="
               w-full
-              max-w-7xl
+              max-w-full
               mx-auto
 
               grid

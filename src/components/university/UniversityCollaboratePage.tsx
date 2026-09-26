@@ -452,3 +452,4 @@ export const UniversityCollaboratePage: React.FC = () => {
     </div>
   );
 };
+

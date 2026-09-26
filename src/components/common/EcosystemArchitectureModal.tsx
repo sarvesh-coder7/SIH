@@ -306,3 +306,4 @@ export const EcosystemArchitectureModal: React.FC<EcosystemArchitectureModalProp
     </div>
   );
 };
+

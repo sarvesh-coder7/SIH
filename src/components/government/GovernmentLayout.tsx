@@ -216,7 +216,7 @@ export const GovernmentLayout: React.FC = () => {
     <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* Official State Header */}
       <header className="shrink-0 bg-slate-900 text-white border-b border-slate-800 z-30 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left: Branding */}
             <div className="flex items-center gap-3">
@@ -346,10 +346,10 @@ export const GovernmentLayout: React.FC = () => {
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 overflow-hidden items-stretch">
+      <div className="flex-1 max-w-full w-full mx-auto px-4 sm:px-6 lg:px-8 flex gap-6 overflow-hidden items-stretch">
         {/* Navigation Sidebar */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 p-4 my-6 overflow-y-auto shrink-0 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:rounded-2xl lg:shadow-xs lg:border pt-sidebar-enter ${
+          className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 p-4 my-6 overflow-y-auto shrink-0 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:z-auto lg:rounded-2xl lg:shadow-xs lg:border pt-sidebar-enter flex flex-col ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -419,7 +419,7 @@ export const GovernmentLayout: React.FC = () => {
           </nav>
 
           {/* Secondary Links */}
-          <div className="pt-4 mt-4 border-t border-slate-200 space-y-1">
+          <div className="pt-4 mt-auto border-t border-slate-200 space-y-1">
             <button
               onClick={() => {
                 setCurrentView('government-help');
@@ -469,3 +469,4 @@ export const GovernmentLayout: React.FC = () => {
     </div>
   );
 };
+

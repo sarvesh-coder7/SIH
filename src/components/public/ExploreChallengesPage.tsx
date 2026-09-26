@@ -242,3 +242,4 @@ export const ExploreChallengesPage: React.FC = () => {
     </div>
   );
 };
+

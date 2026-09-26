@@ -168,3 +168,4 @@ export const UniversityGuidelinesPage: React.FC = () => {
     </div>
   );
 };
+

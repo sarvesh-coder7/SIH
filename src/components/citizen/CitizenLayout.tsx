@@ -15,6 +15,9 @@ import {
   Menu,
   X,
   MapPin,
+  TrendingUp,
+  Award,
+  BarChart,
 } from 'lucide-react';
 
 interface CitizenLayoutProps {
@@ -47,14 +50,38 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
     },
     {
       id: 'citizen-my-challenges' as const,
-      label: 'My Challenges',
+      label: 'My Reports',
       icon: FileText,
+      badge: undefined,
+    },
+    {
+      id: 'map-view' as const,
+      label: 'Map View',
+      icon: MapPin,
       badge: undefined,
     },
     {
       id: 'explore-challenges' as const,
       label: 'Explore Challenges',
       icon: Compass,
+      badge: undefined,
+    },
+    {
+      id: 'leaderboard' as const,
+      label: 'Community Leaderboard',
+      icon: TrendingUp,
+      badge: undefined,
+    },
+    {
+      id: 'achievements' as const,
+      label: 'Achievements',
+      icon: Award,
+      badge: undefined,
+    },
+    {
+      id: 'impact-stats' as const,
+      label: 'Impact & Statistics',
+      icon: BarChart,
       badge: undefined,
     },
     {
@@ -86,7 +113,7 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
     <div className="h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased overflow-hidden selection:bg-amber-500 selection:text-slate-950">
       {/* Top Header */}
       <header className="shrink-0 z-30 w-full bg-white border-b-2 border-[#1f2937] shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand Left */}
           <div className="flex items-center gap-3">
             <button
@@ -121,15 +148,7 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
 
           {/* Right Header Icons */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {/* Quick Report CTA in Header on Desktop */}
-            <button
-              type="button"
-              onClick={() => setCurrentView('submit-challenge')}
-              className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer transform hover:-translate-y-0.5"
-            >
-              <PlusCircle className="w-4 h-4 text-slate-950" />
-              <span>+ Report a Problem</span>
-            </button>
+
 
             {/* Notification Bell */}
             <button
@@ -297,7 +316,7 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
         </aside>
 
         {/* Main Content Pane */}
-        <main className="flex-1 min-w-0 py-6 overflow-y-auto pb-24 lg:pb-8">
+        <main className="flex-1 min-w-0 py-5 overflow-y-auto pb-20 lg:pb-6">
           {children}
         </main>
       </div>
@@ -465,3 +484,4 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
     </div>
   );
 };
+

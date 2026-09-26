@@ -105,3 +105,4 @@ export const JharkhandEmblem: React.FC<JharkhandEmblemProps> = ({
     </div>
   );
 };
+

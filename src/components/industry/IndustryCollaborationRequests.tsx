@@ -238,3 +238,4 @@ export const IndustryCollaborationRequests: React.FC = () => {
     </div>
   );
 };
+

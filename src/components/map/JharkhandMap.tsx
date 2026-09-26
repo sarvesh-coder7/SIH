@@ -344,3 +344,4 @@ export const JharkhandMap: React.FC = () => {
     </div>
   );
 };
+

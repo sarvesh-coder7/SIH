@@ -674,3 +674,4 @@ export const IndustryProjectDetail: React.FC = () => {
     </div>
   );
 };
+

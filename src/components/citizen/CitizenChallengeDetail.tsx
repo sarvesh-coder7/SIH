@@ -1030,3 +1030,4 @@ export const CitizenChallengeDetail: React.FC = () => {
     </div>
   );
 };
+

@@ -319,3 +319,4 @@ export const IndustryExpressInterestModal: React.FC<Props> = ({ project, onClose
     </div>
   );
 };
+

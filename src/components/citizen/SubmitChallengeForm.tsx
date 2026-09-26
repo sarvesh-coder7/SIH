@@ -1250,7 +1250,7 @@ export const SubmitChallengeForm: React.FC = () => {
 
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6 font-sans-body">
+    <div className="max-w-full mx-auto px-4 sm:px-6 py-6 space-y-6 font-sans-body">
       {/* Top Breadcrumb & Title */}
       <div className="flex items-center justify-between">
         <div>
@@ -2781,3 +2781,4 @@ export const SubmitChallengeForm: React.FC = () => {
     </div>
   );
 };
+

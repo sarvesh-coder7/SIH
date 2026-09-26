@@ -139,3 +139,4 @@ export interface LoginCredentials {
   role: UserRole;
   rememberMe?: boolean;
 }
+

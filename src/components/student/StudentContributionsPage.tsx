@@ -47,7 +47,7 @@ export const StudentContributionsPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-full mx-auto">
       <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-2">
         <div className="flex items-center gap-2">
           <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
@@ -120,3 +120,4 @@ export const StudentContributionsPage: React.FC = () => {
     </div>
   );
 };
+

@@ -257,3 +257,4 @@ export const UniversityProfilePage: React.FC = () => {
     </div>
   );
 };
+

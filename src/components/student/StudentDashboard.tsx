@@ -21,7 +21,7 @@ export const StudentDashboard: React.FC = () => {
   const { currentUser, setCurrentView, setSelectedProjectId } = useApp();
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-full mx-auto">
       {/* Student Welcome Banner */}
       <div className="bg-gradient-to-r from-blue-900 to-indigo-950 text-white p-6 rounded-2xl shadow-md space-y-3 relative overflow-hidden">
         <div className="absolute right-0 top-0 translate-x-10 -translate-y-6 opacity-10 pointer-events-none">
@@ -196,3 +196,4 @@ export const StudentDashboard: React.FC = () => {
     </div>
   );
 };
+
