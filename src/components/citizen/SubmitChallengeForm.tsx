@@ -610,12 +610,6 @@ export const SubmitChallengeForm: React.FC = () => {
     const newController = new AbortController();
     cameraGeocodeAbortRef.current = newController;
 
-    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
-      showToast('info', 'Camera Fallback', 'Camera access requires HTTPS. Falling back to device camera/gallery.');
-      photoInputRef.current?.click();
-      return;
-    }
-
     setIsCameraOpen(true);
     setCameraError(null);
 
@@ -690,9 +684,10 @@ export const SubmitChallengeForm: React.FC = () => {
     // 2. Prepare new photo object based on fresh GPS data
     if (photoGpsStatus === 'ready' && photoLocationData) {
       try {
+        const stampText = `Lat: ${photoLocationData.latitude.toFixed(6)}, Lng: ${photoLocationData.longitude.toFixed(6)} | ${photoLocationData.formattedAddress}`;
         const stampedDataUrl = await stampPhotoWithAddress(
           originalDataUrl,
-          `📍 ${photoLocationData.formattedAddress}`
+          stampText
         );
 
         setPhotoPreview({
@@ -831,12 +826,6 @@ export const SubmitChallengeForm: React.FC = () => {
     }
     const newController = new AbortController();
     cameraGeocodeAbortRef.current = newController;
-
-    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
-      showToast('info', 'Video Fallback', 'Video recording requires HTTPS. Falling back to device camera/gallery.');
-      videoCaptureRef.current?.click();
-      return;
-    }
 
     setIsVideoRecordOpen(true);
     setCameraError(null);
@@ -1033,6 +1022,12 @@ export const SubmitChallengeForm: React.FC = () => {
       const { data: authData } = await supabase.auth.getUser();
       const activeUserId = authData?.user?.id || (currentUser?.id && currentUser.id !== 'guest' ? currentUser.id : null);
       console.log("Submitting with authenticated user ID:", activeUserId);
+
+      if (!activeUserId) {
+        showToast('error', 'Authentication Required', 'You must be logged in to submit a challenge.');
+        setIsSubmitting(false);
+        return;
+      }
 
       const newChallenge = await challengeService.createChallenge({
         title: problemTitle.trim(),
@@ -1549,7 +1544,7 @@ export const SubmitChallengeForm: React.FC = () => {
                 }
                 setStep(2);
               }}
-              disabled={!problemTitle.trim() || !whatIsHappening.trim()}
+              disabled={!problemTitle.trim() || !whatIsHappening.trim() || !affectedPeopleCount.trim()}
               className="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs sm:text-sm rounded-xl shadow-md cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>Next: Location</span>
@@ -2097,6 +2092,12 @@ export const SubmitChallengeForm: React.FC = () => {
             <button
               type="button"
               onClick={() => {
+                const hasGeotagged = photos.some(p => p.isGeotagged);
+                const hasVideo = otherFiles.some(f => f.type === 'video');
+                if (!hasGeotagged || !hasVideo) {
+                  setPhotoValidationError('Please attach at least one geo-tagged photo and one video to proceed.');
+                  return;
+                }
                 setPhotoValidationError(null);
                 setStep(4);
               }}

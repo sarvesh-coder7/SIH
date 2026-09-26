@@ -402,70 +402,7 @@ class ChallengeService {
     console.log("CITIZEN ID:", input.submittedBy?.userId);
 
     if (!validSubmittedBy) {
-      console.warn("No valid UUID for user. Operating in demo isolation mode - bypassing Supabase insertion.");
-      // Return a fully hydrated mock challenge for demo users
-      const mockId = `demo-ch-${Date.now()}`;
-      return {
-        id: mockId,
-        trackingId,
-        title: input.title,
-        description: input.description,
-        problemSummary: input.description,
-        category: input.category,
-        subCategory: input.subCategory || aiAnalysis.subCategory,
-        district: input.district || 'Ranchi',
-        block: input.block || '',
-        village: input.village || '',
-        gpsCoordinates: { lat: latVal, lng: lngVal },
-        submittedBy: {
-          userId: input.submittedBy?.userId || 'guest',
-          userName: input.submittedBy?.userName || 'Citizen Submitter',
-          userRole: input.submittedBy?.userRole || 'Citizen',
-          contactNumber: input.submittedBy?.contactNumber,
-        },
-        affectedPopulation: Math.max(1, Number(input.affectedPopulation) || 1),
-        frequency: input.frequency || 'Daily',
-        urgency: input.urgency || 'High',
-        expectedImpact: input.expectedImpact || '',
-        additionalInformation: input.additionalInformation,
-        submittedAt: new Date().toISOString(),
-        status: 'Submitted',
-        currentStage: 'Challenge Submitted',
-        trustStatus: 'Evidence Submitted',
-        viewsCount: 1,
-        endorsementsCount: 1,
-        aiAnalysis,
-        timeline: [
-          {
-            stage: 'Challenge Submitted',
-            date: new Date().toISOString(),
-            description: `Filed by ${input.submittedBy?.userName || 'Citizen Submitter'} from ${input.district || 'Jharkhand'}. Initial review pending.`,
-            actor: input.submittedBy?.userName || 'Citizen Submitter',
-          },
-          {
-            stage: 'AI Screening & Ingestion',
-            date: new Date().toISOString(),
-            description: `AI Priority Score: ${aiAnalysis.priorityScore}/100. Category: ${aiAnalysis.category}.`,
-            actor: 'AI Problem Triage Engine',
-          }
-        ],
-        evidence: (input.evidenceUrls || []).map((ev: any, i) => ({
-          id: `ev-${Date.now()}-${i}`,
-          type: ev.type || 'image',
-          url: typeof ev === 'string' ? ev : (ev.url || ''),
-          caption: ev.caption || 'Evidence',
-          timestamp: ev.timestamp || new Date().toISOString(),
-          gpsCoordinates: ev.gpsCoordinates,
-          geotagLocation: ev.geotagLocation,
-          accuracy: ev.accuracy,
-          isGeotagged: ev.isGeotagged || false,
-          source: ev.source || 'upload',
-          fileName: ev.fileName,
-          fileSize: ev.fileSize,
-        })),
-        tags: [input.category, input.district || 'Jharkhand', 'Crowdsourced'],
-        openForSolutions: false,
-      } as Challenge;
+      throw new Error('Authentication required. You must be logged in with a valid user account to submit a challenge.');
     }
 
     const { data: row, error } = await supabase

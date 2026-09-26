@@ -521,9 +521,8 @@ export function parseNominatimAddress(response: NominatimResponse): ParsedAddres
     null;
 
   const rawDistrict =
-    addr.district ||
-    addr.county ||
     addr.state_district ||
+    addr.district ||
     null;
 
   const rawState = addr.state || null;
@@ -751,4 +750,5 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 
   return R * c;
 }
+
 

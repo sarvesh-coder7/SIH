@@ -258,7 +258,7 @@ export const CitizenMyChallengesPage: React.FC = () => {
         {/* Filter Count & Reset */}
         <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
           <span>
-            Showing <strong>{filteredChallenges.length}</strong> of {challenges.length} reports
+            Showing <strong>{filteredChallenges.length}</strong> of {myOwnChallenges.length} of your reports
           </span>
           {(searchQuery || selectedStatus !== 'All' || selectedDistrict !== 'All') && (
             <button
@@ -306,10 +306,28 @@ export const CitizenMyChallengesPage: React.FC = () => {
           <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-500 mx-auto flex items-center justify-center">
             <FileText className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-900">No Challenges Match Your Filter</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Try adjusting your search query or selecting a different status filter.
-          </p>
+          {myOwnChallenges.length === 0 ? (
+            <>
+              <h3 className="text-sm font-bold text-slate-900">You haven't submitted any reports yet</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Use the button above to report a community problem. Your submissions will appear here.
+              </p>
+              <button
+                type="button"
+                onClick={() => setCurrentView('submit-challenge')}
+                className="mx-auto mt-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <span>+ Report a Problem</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <h3 className="text-sm font-bold text-slate-900">No Challenges Match Your Filter</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Try adjusting your search query or selecting a different status filter.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
